@@ -1,0 +1,1 @@
+{"Categories":{"Render":{"Position":{"Y":119,"X":163}},"Combat":{"Position":{"Y":120,"X":1414}},"Blatant":{"Position":{"Y":117,"X":804}},"Utility":{"Position":{"Y":111,"X":479}},"World":{"Position":{"Y":119,"X":1120}}},"Keybind":["P"],"Profile":"default","Profiles":[{"Name":"default","Bind":[]}]}

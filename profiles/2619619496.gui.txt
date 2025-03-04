@@ -1,0 +1,1 @@
+{"Profile":"default","Keybind":["RightShift"],"Categories":{"Render":{"Position":{"Y":64,"X":704}},"Combat":{"Position":{"Y":61,"X":109}},"Blatant":{"Position":{"Y":63,"X":407}},"Utility":{"Position":{"Y":61,"X":1001}},"World":{"Position":{"Y":62,"X":1296}}},"Profiles":[{"Name":"default","Bind":[]},{"Name":"ClosetCheat","Bind":[]}]}
