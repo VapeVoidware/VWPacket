@@ -3024,12 +3024,14 @@ local function EntityNearPosition(distance, ignore, overridepos)
 end
 
 local IgnoreObject = RaycastParams.new()
-local IgnoreObject.RespectCanCollide = true
+IgnoreObject.RespectCanCollide = true
 local lplr = game:GetService("Players").LocalPlayer
+local List = {}
 local Wallcheck = function(origin, position, ignoreobject)
+	List = entitylib and entitylib.List or entityLibrary and entityLibrary.entityList
 	if typeof(ignoreobject) ~= 'Instance' then
 		local ignorelist = {gameCamera, lplr.Character}
-		for _, v in entitylib.List or entitylib.entityList do
+		for _, v in List do
 			if v.Targetable then
 				table.insert(ignorelist, v.Character)
 			end
@@ -3044,7 +3046,7 @@ local Wallcheck = function(origin, position, ignoreobject)
 		ignoreobject = IgnoreObject
 		ignoreobject.FilterDescendantsInstances = ignorelist
 	end
-	return workspace.Raycast(workspace, origin, (position - origin), ignoreobject)
+	return game.Workspace.Raycast(game.Workspace, origin, (position - origin), ignoreobject)
 end
 
 run(function()
