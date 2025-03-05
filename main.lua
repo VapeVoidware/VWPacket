@@ -179,20 +179,26 @@ getgenv().vape = packet
 getgenv().GuiLibrary = packet
 shared.GuiLibrary = packet
 
-getgenv().InfoNotification = function(title, msg, dur)
+local InfoNotification = function(title, msg, dur)
 	warn('info', tostring(title), tostring(msg), tostring(dur))
 	packet:CreateNotification(title, msg, dur)
 end
-getgenv().warningNotification = function(title, msg, dur)
+
+getgenv().InfoNotification = InfoNotification
+local warningNotification = function(title, msg, dur)
 	warn('warn', tostring(title), tostring(msg), tostring(dur))
 	packet:CreateNotification(title, msg, dur, 'warning')
 end
-getgenv().errorNotification = function(title, msg, dur)
+getgenv().warningNotification = warningNotification
+local errorNotification = function(title, msg, dur)
 	warn("error", tostring(title), tostring(msg), tostring(dur))
 	packet:CreateNotification(title, msg, dur, 'alert')
 end
+getgenv().errorNotification = errorNotification
 if shared.CheatEngineMode then
-	InfoNotification("Voidware | CheatEngineMode", "Due to your executor not supporting some functions \n some modules might be missing!", 5) 
+	pcall(function()
+		InfoNotification("Voidware | CheatEngineMode", "Due to your executor not supporting some functions \n some modules might be missing!", 5) 
+	end)
 end
 --[[pcall(function()
 	if (not isfile('vape/discord2.txt')) then
