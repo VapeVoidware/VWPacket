@@ -2883,32 +2883,6 @@ local function gettargets(range, maxt, limit)
 	return targets
 end
 
-local IgnoreObject = RaycastParams.new()
-IgnoreObject.RespectCanCollide = true
-local lplr = game:GetService("Players").LocalPlayer
-local List = {}
-local Wallcheck = function(origin, position, ignoreobject)
-	List = entitylib and entitylib.List or entityLibrary and entityLibrary.entityList
-	if typeof(ignoreobject) ~= 'Instance' then
-		local ignorelist = {gameCamera, lplr.Character}
-		for _, v in List do
-			if v.Targetable then
-				table.insert(ignorelist, v.Character)
-			end
-		end
-
-		if typeof(ignoreobject) == 'table' then
-			for _, v in ignoreobject do
-				table.insert(ignorelist, v)
-			end
-		end
-
-		ignoreobject = IgnoreObject
-		ignoreobject.FilterDescendantsInstances = ignorelist
-	end
-	return game.Workspace.Raycast(game.Workspace, origin, (position - origin), ignoreobject)
-end
-
 local function EntityNearPosition(distance, ignore, overridepos)
 	local closestEntity, closestMagnitude = nil, distance
 	if entityLibrary.isAlive then
@@ -3028,8 +3002,8 @@ local function Wallcheck(attackerCharacter, targetCharacter, additionalIgnore)
         return false
     end
 
-    local humanoidRootPart = attackerCharacter:FindFirstChild("HumanoidRootPart")
-    local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
+    local humanoidRootPart = attackerCharacter.PrimaryPart
+    local targetRootPart = targetCharacter.PrimaryPart
     if not (humanoidRootPart and targetRootPart) then
         return false
     end
@@ -3061,7 +3035,7 @@ local function Wallcheck(attackerCharacter, targetCharacter, additionalIgnore)
             return false
         end
     else
-        return false
+        return true
     end
 end
 
