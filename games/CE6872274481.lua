@@ -11,7 +11,17 @@ local tween = vape.Libraries.tween
 local color = vape.Libraries.color
 local whitelist = vape.Libraries.whitelist
 local prediction = vape.Libraries.prediction
-local getfontsize = vape.Libraries.getfontsize
+local fontsize = Instance.new('GetTextBoundsParams')
+fontsize.Width = math.huge
+local textservice = game:GetService("TextService")
+local getfontsize = function(text, size, font)
+	fontsize.Text = text
+	fontsize.Size = size
+	if typeof(font) == 'Font' then
+		fontsize.Font = font
+	end
+	return textservice:GetTextBoundsAsync(fontsize)
+end
 local getcustomasset = vape.Libraries.getcustomasset
 
 local GuiLibrary = vape
