@@ -3023,6 +3023,30 @@ local function EntityNearPosition(distance, ignore, overridepos)
 	return closestEntity
 end
 
+local IgnoreObject = RaycastParams.new()
+local IgnoreObject.RespectCanCollide = true
+local lplr = game:GetService("Players").LocalPlayer
+local Wallcheck = function(origin, position, ignoreobject)
+	if typeof(ignoreobject) ~= 'Instance' then
+		local ignorelist = {gameCamera, lplr.Character}
+		for _, v in entitylib.List or entitylib.entityList do
+			if v.Targetable then
+				table.insert(ignorelist, v.Character)
+			end
+		end
+
+		if typeof(ignoreobject) == 'table' then
+			for _, v in ignoreobject do
+				table.insert(ignorelist, v)
+			end
+		end
+
+		ignoreobject = IgnoreObject
+		ignoreobject.FilterDescendantsInstances = ignorelist
+	end
+	return workspace.Raycast(workspace, origin, (position - origin), ignoreobject)
+end
+
 run(function()
 	local animating
 	local Killaura = {Enabled = false}
@@ -3121,7 +3145,7 @@ run(function()
 					
 					for _, targ in ipairs(targets) do
 						if Killaura.wallscheck then
-							if not WallCheck(lplr.Character:WaitForChild("HumanoidRootPart"), targ.RootPart.Position, true) then return end
+							if not WallCheck(lplr.Character:WaitForChild("HumanoidRootPart"), targ.RootPart.Position, true) then continue end
 						end
 						task.spawn(function()
 							bedwars.Client:Get(bedwars.AttackRemote):FireServer({
