@@ -3119,9 +3119,7 @@ run(function()
 						end
 					else
 						if lplr.Character.InventoryFolder.Value:FindFirstChild(weap.Name) then
-							bedwars.Client:Get(bedwars.EquipItemRemote):InvokeServer({
-								["hand"] = lplr.Character.InventoryFolder.Value:WaitForChild(weap.Name)
-							})
+							switchitem(weap.Name)
 						end
 					end
 					Attacking = true
