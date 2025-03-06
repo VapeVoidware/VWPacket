@@ -1295,10 +1295,14 @@ local function downloadVapeAsset(path)
 end
 
 local function run(func)
-	local suc, err = pcall(function()
+	if shared.VoidDev then
 		func()
-	end)
-	if err then warn("[CE687224481.lua Module Error]: "..tostring(debug.traceback(err))) end
+	else
+		local suc, err = pcall(function()
+			func()
+		end)
+		if err then warn("[CE687224481.lua Module Error]: "..tostring(debug.traceback(err))) end
+	end
 end
 
 local function isFriend(plr, recolor)
