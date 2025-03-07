@@ -4019,6 +4019,7 @@ run(function()
 	local CoreConnection = {Disconnect = function() end}
 
 	local collectionService = game:GetService("CollectionService")
+	local vapeConnections = vapeConnections or {}
 
 	local blockRaycast = RaycastParams.new()
 	blockRaycast.FilterType = Enum.RaycastFilterType.Include
