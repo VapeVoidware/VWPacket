@@ -3422,7 +3422,7 @@ run(function()
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
-								if Targets.Walls.Enabled and not Wallcheck(lplr.Character, plr.Character) then continue end
+								if Targets.Walls.Enabled and not Wallcheck(lplr.Character, v.Character) then continue end
 
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
