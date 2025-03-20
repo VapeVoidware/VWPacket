@@ -1658,7 +1658,7 @@ run(function()
 					end)
 					task.delay(1.6, function() jumps = 0 end)
 					if DoubleHighJump.Enabled then
-					   DoubleHighJump.ToggleButton(false)
+					   DoubleHighJump:Toggle(false)
 					end
 				end)
 			end
@@ -4483,8 +4483,8 @@ run(function()
 		Name = 'Only Bedwars',
 		Function = function()
 			if AutoBuy.Enabled then
-				AutoBuy.ToggleButton(false)
-				AutoBuy.ToggleButton(false)
+				AutoBuy:Toggle(false)
+				AutoBuy:Toggle(false)
 			end
 		end,
 		Default = true
