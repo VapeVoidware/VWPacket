@@ -46,10 +46,10 @@ task.spawn(function()
 		end
 
 		local function filterStackTrace(stackTrace)
+			stackTrace = stackTrace or "Unknown"
+			if type(stackTrace) ~= "string" then stackTrace = "INVALID \n"..tostring(stackTrace) end
 			if type(stackTrace) == "string" then
 				return string.split(stackTrace, "\n")
-			else
-				return stackTrace
 			end
 		end
 
@@ -1027,7 +1027,7 @@ run(function()
 
     LightingTheme = vape.Categories.World:CreateModule({
         Name = "LightingTheme",
-        HoverText = "Add a whole new look to your game.",
+        Tooltip = "Add a whole new look to your game.",
         ExtraText = function() return LightingThemeType.Value end,
         Function = function(callback)
             if callback then

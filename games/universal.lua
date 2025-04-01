@@ -406,6 +406,7 @@ run(function()
 	end
 
 	entitylib.getEntityColor = function(ent)
+		if not ent.Player then return nil end
 		ent = ent.Player
 		return tostring(ent.TeamColor) ~= 'White' and ent.TeamColor.Color or nil
 	end
@@ -7077,7 +7078,7 @@ run(function()
 	local UIS_Connection = {Disconnect = function() end}
 	CustomJump = vape.Categories.Blatant:CreateModule({
 		Name = "Infinite Jump",
-        HoverText = "Customizes your jumping ability",
+        Tooltip = "Customizes your jumping ability",
 		Function = function(callback)
 			if callback then
 				UIS_Connection = game:GetService("UserInputService").JumpRequest:Connect(function()
