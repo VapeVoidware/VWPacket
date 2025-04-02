@@ -1533,7 +1533,6 @@ run(function()
         if type(remoteName) == "table" then
             remoteName = remoteName.instance.Name
         end
-		print(remoteName)
         local call = OldGet(self, remoteName)
         if remoteName == remotes.AttackEntity then
             return {
@@ -3210,9 +3209,41 @@ run(function()
 	local WallCheck
 	local PopBalloons
 	local TP
+	local lastonground = false
+	local MobileButtons
+	local FlyAnywayProgressBar = {Enabled = false}
+	local FlyAnywayProgressBarFrame
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
 	local up, down, old = 0, 0
+	local mobileControls = {}
+
+	local function createMobileButton(name, position, icon)
+		local button = Instance.new("TextButton")
+		button.Name = name
+		button.Size = UDim2.new(0, 60, 0, 60)
+		button.Position = position
+		button.BackgroundTransparency = 0.2
+		button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		button.BorderSizePixel = 0
+		button.Text = icon
+		button.TextScaled = true
+		button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		button.Font = Enum.Font.SourceSansBold
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = button
+		return button
+	end
+
+	local function cleanupMobileControls()
+		for _, control in pairs(mobileControls) do
+			if control then
+				control:Destroy()
+			end
+		end
+		mobileControls = {}
+	end
 
 	Fly = vape.Categories.Blatant:CreateModule({
 		Name = 'Fly',
@@ -3227,11 +3258,62 @@ run(function()
 				if lplr.Character and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
 					bedwars.BalloonController:inflateBalloon()
 				end
+
 				Fly:Clean(vapeEvents.AttributeChanged.Event:Connect(function(changed)
 					if changed == 'InflatedBalloons' and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
 						bedwars.BalloonController:inflateBalloon()
 					end
 				end))
+
+				task.spawn(function()
+					repeat
+						task.wait()
+						if entitylib.isAlive then
+							entityLibrary.groundTick = entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air and tick() or entityLibrary.groundTick
+						end
+					until not Fly.Enabled
+				end)
+
+				Fly:Clean(runService.Heartbeat:Connect(function(delta)
+					if entityLibrary.isAlive then
+						local playerMass = (entityLibrary.character.HumanoidRootPart:GetMass() - 1.4) * (delta * 100)
+						flyAllowed = ((lplr.Character:GetAttribute("InflatedBalloons") and lplr.Character:GetAttribute("InflatedBalloons") > 0) or store.matchState == 2 or megacheck) and 1 or 0
+						playerMass = playerMass + (flyAllowed > 0 and 4 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)
+
+						if FlyAnywayProgressBarFrame then
+							FlyAnywayProgressBarFrame.Visible = flyAllowed <= 0
+							FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
+							pcall(function()
+								FlyAnywayProgressBarFrame.Frame.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
+							end)
+						end
+
+						if flyAllowed <= 0 then
+							local newray = getPlacedBlock(entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0, (entityLibrary.character.Humanoid.HipHeight * -2) - 1, 0))
+							onground = newray and true or false
+							if lastonground ~= onground then
+								if (not onground) then
+									groundtime = tick() + (2.6 + (entityLibrary.groundTick - tick()))
+									if FlyAnywayProgressBarFrame then
+										FlyAnywayProgressBarFrame.Frame:TweenSize(UDim2.new(0, 0, 0, 20), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, groundtime - tick(), true)
+									end
+								else
+									if FlyAnywayProgressBarFrame then
+										FlyAnywayProgressBarFrame.Frame:TweenSize(UDim2.new(1, 0, 0, 20), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, 0, true)
+									end
+								end
+							end
+							if FlyAnywayProgressBarFrame then
+								FlyAnywayProgressBarFrame.TextLabel.Text = math.max(onground and 2.5 or math.floor((groundtime - tick()) * 10) / 10, 0).."s"
+							end
+							lastonground = onground
+						else
+							onground = true
+							lastonground = true
+						end
+					end
+				end))
+
 				Fly:Clean(runService.PreSimulation:Connect(function(dt)
 					if entitylib.isAlive and not InfiniteFly.Enabled and isnetworkowner(entitylib.character.RootPart) then
 						local flyAllowed = (lplr.Character:GetAttribute('InflatedBalloons') and lplr.Character:GetAttribute('InflatedBalloons') > 0) or store.matchState == 2
@@ -3249,6 +3331,11 @@ run(function()
 							end
 						end
 
+						if FlyAnywayProgressBarFrame and not flyAllowed then
+							FlyAnywayProgressBarFrame.Visible = true
+							pcall(function() FlyAnywayProgressBarFrame.Frame:TweenSize(UDim2.new(1, 0, 0, 20), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, 0, true) end)
+						end
+
 						if not flyAllowed then
 							if tpToggle then
 								local airleft = (tick() - entitylib.character.AirTime)
@@ -3264,23 +3351,58 @@ run(function()
 									end
 								end
 							else
-								if oldy then
-									if tpTick < tick() then
-										local newpos = Vector3.new(root.Position.X, oldy, root.Position.Z)
-										root.CFrame = CFrame.lookAlong(newpos, root.CFrame.LookVector)
-										tpToggle = true
-										oldy = nil
-									else
-										mass = 0
-									end
+								if oldy and tpTick < tick() then
+									local newpos = Vector3.new(root.Position.X, oldy, root.Position.Z)
+									root.CFrame = CFrame.lookAlong(newpos, root.CFrame.LookVector)
+									tpToggle = true
+									oldy = nil
+									entitylib.character.AirTime = tick()
+								else
+									mass = 0
 								end
 							end
+						else
+							tpToggle = true
+							oldy = nil
 						end
 
 						root.CFrame += destination
 						root.AssemblyLinearVelocity = (moveDirection * velo) + Vector3.new(0, mass, 0)
 					end
 				end))
+
+				local isMobile = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled
+				local MobileEnabled = MobileButtons.Enabled or isMobile
+				if MobileEnabled then
+					local gui = Instance.new("ScreenGui")
+					gui.Name = "FlyControls"
+					gui.ResetOnSpawn = false
+					gui.Parent = lplr.PlayerGui
+
+					local upButton = createMobileButton("UpButton", UDim2.new(0.9, -70, 0.7, -140), "↑")
+					local downButton = createMobileButton("DownButton", UDim2.new(0.9, -70, 0.7, -70), "↓")
+
+					mobileControls.UpButton = upButton
+					mobileControls.DownButton = downButton
+					mobileControls.ScreenGui = gui
+
+					upButton.Parent = gui
+					downButton.Parent = gui
+
+					Fly:Clean(upButton.MouseButton1Down:Connect(function()
+						up = 1
+					end))
+					Fly:Clean(upButton.MouseButton1Up:Connect(function()
+						up = 0
+					end))
+					Fly:Clean(downButton.MouseButton1Down:Connect(function()
+						down = -1
+					end))
+					Fly:Clean(downButton.MouseButton1Up:Connect(function()
+						down = 0
+					end))
+				end
+
 				Fly:Clean(inputService.InputBegan:Connect(function(input)
 					if not inputService:GetFocusedTextBox() then
 						if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA then
@@ -3301,17 +3423,24 @@ run(function()
 					pcall(function()
 						local jumpButton = lplr.PlayerGui.TouchGui.TouchControlFrame.JumpButton
 						Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()
-							up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
+							if not mobileControls.UpButton then
+								up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
+							end
 						end))
 					end)
 				end
 			else
+				if FlyAnywayProgressBarFrame then
+					FlyAnywayProgressBarFrame.Visible = false
+				end
+				lastonground = nil
 				bedwars.BalloonController.deflateBalloon = old
 				if PopBalloons.Enabled and entitylib.isAlive and (lplr.Character:GetAttribute('InflatedBalloons') or 0) > 0 then
 					for _ = 1, 3 do
 						bedwars.BalloonController:deflateBalloon()
 					end
 				end
+				cleanupMobileControls()
 			end
 		end,
 		ExtraText = function()
@@ -3345,9 +3474,55 @@ run(function()
 		Name = 'Pop Balloons',
 		Default = true
 	})
+	FlyAnywayProgressBar = Fly:CreateToggle({
+		Name = "Progress Bar",
+		Function = function(callback)
+			if callback then
+				FlyAnywayProgressBarFrame = Instance.new("Frame")
+				FlyAnywayProgressBarFrame.AnchorPoint = Vector2.new(0.5, 0)
+				FlyAnywayProgressBarFrame.Position = UDim2.new(0.5, 0, 1, -200)
+				FlyAnywayProgressBarFrame.Size = UDim2.new(0.2, 0, 0, 20)
+				FlyAnywayProgressBarFrame.BackgroundTransparency = 0.5
+				FlyAnywayProgressBarFrame.BorderSizePixel = 0
+				FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+				FlyAnywayProgressBarFrame.Visible = Fly.Enabled
+				FlyAnywayProgressBarFrame.Parent = vape.gui
+				local FlyAnywayProgressBarFrame2 = FlyAnywayProgressBarFrame:Clone()
+				FlyAnywayProgressBarFrame2.AnchorPoint = Vector2.new(0, 0)
+				FlyAnywayProgressBarFrame2.Position = UDim2.new(0, 0, 0, 0)
+				FlyAnywayProgressBarFrame2.Size = UDim2.new(1, 0, 0, 20)
+				FlyAnywayProgressBarFrame2.BackgroundTransparency = 0
+				FlyAnywayProgressBarFrame2.Visible = true
+				FlyAnywayProgressBarFrame2.Parent = FlyAnywayProgressBarFrame
+				local FlyAnywayProgressBartext = Instance.new("TextLabel")
+				FlyAnywayProgressBartext.Text = "2s"
+				FlyAnywayProgressBartext.Font = Enum.Font.Gotham
+				FlyAnywayProgressBartext.TextStrokeTransparency = 0
+				FlyAnywayProgressBartext.TextColor3 =  Color3.new(0.9, 0.9, 0.9)
+				FlyAnywayProgressBartext.TextSize = 20
+				FlyAnywayProgressBartext.Size = UDim2.new(1, 0, 1, 0)
+				FlyAnywayProgressBartext.BackgroundTransparency = 1
+				FlyAnywayProgressBartext.Position = UDim2.new(0, 0, -1, 0)
+				FlyAnywayProgressBartext.Parent = FlyAnywayProgressBarFrame
+			else
+				if FlyAnywayProgressBarFrame then FlyAnywayProgressBarFrame:Destroy() FlyAnywayProgressBarFrame = nil end
+			end
+		end,
+		Tooltip = "show amount of Fly time",
+		Default = true
+	})
 	TP = Fly:CreateToggle({
 		Name = 'TP Down',
 		Default = true
+	})
+	MobileButtons = Fly:CreateToggle({
+		Name = "Mobile Buttons",
+		Function = function() 
+			if Fly.Enabled then
+				Fly:Toggle()
+				Fly:Toggle()
+			end
+		end
 	})
 end)
 
