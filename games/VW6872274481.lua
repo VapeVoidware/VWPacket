@@ -30,7 +30,7 @@ run(function()
 	end
 	local Slowmode = {Value = 2}
 	GodMode = vape.Categories.Blatant:CreateModule({
-		Name = "AntiHit/Godmode",
+		Name = "Auto Dodge",
 		Function = function(callback)
 			if callback then
 				task.spawn(function()
@@ -110,7 +110,7 @@ end
 local entitylib = shared.vape.entitylib
 local lplr = game:GetService("Players").LocalPlayer
 
-run(function()
+--[[run(function()
 	local AntiHit = {}
 	local physEngine = game:GetService("RunService")
 	local worldSpace = game.Workspace
@@ -288,4 +288,4 @@ run(function()
 		Suffix = function(v) return v == 1 and "span" or "spans" end,
 		Function = function(v) scanRad = v end
 	})
-end)
+end)--]]
