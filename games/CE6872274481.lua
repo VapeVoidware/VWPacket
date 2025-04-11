@@ -1309,6 +1309,11 @@ function bedwars.SoundManager:playSound(soundId)
         sound:Destroy()
     end)
 end
+bedwars.QueryUtil = {}
+function bedwars.QueryUtil:setQueryIgnored(object, status)
+	if status == nil then status = true end
+	object:SetAttribute("gamecore_GameQueryIgnore", status)
+end
 bedwars.MatchController = {}
 function bedwars.MatchController:fetchPlayerTeam(plr)
 	return tostring(plr.Team)
