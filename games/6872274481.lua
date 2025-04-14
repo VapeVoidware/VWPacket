@@ -5182,6 +5182,7 @@ end)
 run(function()
     local BlockIn = {}
 	local HandCheck = {Enabled = false}
+	local AutoSwitch = {Enabled = false}
     
     local PatternArchitect = {}
     PatternArchitect.__index = PatternArchitect
@@ -5226,7 +5227,7 @@ run(function()
         for _, item in pairs(inventory) do
             local meta = bedwars.ItemMeta[item.itemType]
             if meta.block then
-                blocks[#blocks + 1] = {itemType = item.itemType, score = meta.block.health or 0}
+                blocks[#blocks + 1] = {itemType = item.itemType, score = meta.block.health or 0, tool = item.tool}
             end
         end
         table.sort(blocks, function(a, b) return a.score < b.score end)
@@ -5249,7 +5250,7 @@ run(function()
                 return
             end
 
-			if HandCheck.Enabled then
+			if HandCheck.Enabled and not AutoSwitch.Enabled then
 				if not (store.hand and store.hand.toolType == "block") then
 					errorNotification("BlockIn | Hand Check", "You aren't holding a block!", 1.5)
 					BlockIn:Toggle()
@@ -5264,7 +5265,7 @@ run(function()
             local blocks = strategist:EvaluateInventory(store.inventory.inventory.items)
             
             if #blocks == 0 then
-                errorNotification('BlockIn', 'No suitable blocks available for BlockIn', 5)
+				errorNotification('BlockIn', 'No suitable blocks available for BlockIn', 5)
                 BlockIn:Toggle()
                 return
             end
@@ -5280,11 +5281,14 @@ run(function()
                     local blockAtPos = bedwars.BlockController:getStore():getBlockAt(bedwars.BlockController:getBlockPosition(pos))
                     if not blockAtPos then
                         local block = blocks[blockIndex]
+						if AutoSwitch.Enabled then 
+							switchItem(block.tool)
+						end
                         local success = pcall(function()
                             bedwars.placeBlock(pos, block.itemType, false)
                         end)
                         if not success then
-                            errorNotification('BlockIn', 'Failed to place block at position', 3)
+							errorNotification('BlockIn', 'Failed to place block at position.', 3)
                         end
                         blockIndex = (blockIndex % blockCount) + 1
                         task.wait(0.05) 
@@ -5304,6 +5308,12 @@ run(function()
 		Name = "Hand Check",
 		Function = function() end,
 		Default = false
+	})
+
+	AutoSwitch = BlockIn:CreateToggle({
+		Name = "Auto Switch", 
+		Function = function() end, 
+		Default = true
 	})
 end)
 
@@ -6612,13 +6622,16 @@ run(function()
 	
 	local UserInputService = game:GetService("UserInputService")
 	local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+	local ProjectileAimbot = {Enabled = false}
+	local TargetVisualiser = {Enabled = false}
 	
 	local function updateOutline(target)
 		if targetOutline then
 			targetOutline:Destroy()
 			targetOutline = nil
 		end
-		if target then
+		if target and TargetVisualiser.Enabled then
 			targetOutline = Instance.new("Highlight")
 			targetOutline.FillTransparency = 1
 			targetOutline.OutlineColor = Color3.fromRGB(255, 0, 0)
@@ -6629,13 +6642,15 @@ run(function()
 	end
 
 	local CoreConnections = {}
+	local hovering = false
+	local Players = game:GetService("Players")
 	
 	local function handlePlayerSelection()
 		local mouse = lplr:GetMouse()
-		local function selectTarget()
-			local target = mouse.Target
+		local function selectTarget(target)
+			if not target then return end
 			if target and target.Parent then
-				local plr = game.Players:GetPlayerFromCharacter(target.Parent)
+				local plr = Players:GetPlayerFromCharacter(target.Parent)
 				if plr then
 					if selectedTarget == plr then
 						selectedTarget = nil
@@ -6648,28 +6663,29 @@ run(function()
 			end
 		end
 		
+		local con
 		if isMobile then
-			local con = UserInputService.TouchTapInWorld:Connect(function(touchPos)
+			con = UserInputService.TouchTapInWorld:Connect(function(touchPos)
+				if not hovering then updateOutline(nil); return end
+				if not ProjectileAimbot.Enabled then pcall(function() con:Disconnect() end); updateOutline(nil); return end
 				local ray = workspace.CurrentCamera:ScreenPointToRay(touchPos.X, touchPos.Y)
 				local result = workspace:Raycast(ray.Origin, ray.Direction * 1000)
 				if result and result.Instance then
-					mouse.Target = result.Instance
-					selectTarget()
+					selectTarget(target)
 				end
 			end)
 			table.insert(CoreConnections, con)
-		else
-			table.insert(CoreConnections, mouse.Button1Down:Connect(selectTarget))
 		end
 	end
 	
-	local ProjectileAimbot = vape.Categories.World:CreateModule({
+	ProjectileAimbot = vape.Categories.World:CreateModule({
 		Name = 'ProjectileAimbot',
 		Function = function(callback)
 			if callback then
 				handlePlayerSelection()
 				old = bedwars.ProjectileController.calculateImportantLaunchValues
 				bedwars.ProjectileController.calculateImportantLaunchValues = function(...)
+					hovering = true
 					local self, projmeta, worldmeta, origin, shootpos = ...
 					local originPos = entitylib.isAlive and (shootpos or entitylib.character.RootPart.Position) or Vector3.zero
 					
@@ -6756,6 +6772,7 @@ run(function()
 						end
 					end
 	
+					hovering = false
 					return old(...)
 				end
 			else
@@ -6795,6 +6812,7 @@ run(function()
 		Default = 100,
 		Tooltip = 'Maximum distance for target locking'
 	})
+	TargetVisualiser = ProjectileAimbot:CreateToggle({Name = "Target Visualiser", Default = true})
 	OtherProjectiles = ProjectileAimbot:CreateToggle({
 		Name = 'Other Projectiles',
 		Default = true
