@@ -210,7 +210,7 @@ if not are_installed_1() then install_profiles(1) end
 local url = 'https://github.com/VapeVoidware/VWPacket'
 local commit = "main"
 writefile(baseDirectory.."commithash2.txt", commit)
-commit = '985c43a1ef313589eee9891ea15992c59a05ec5a'
+commit = '4d858fa7de1a7efc0e44bb10fb3bbaa9d2cb5c6c'
 commit = shared.CustomCommit and tostring(shared.CustomCommit) or commit
 writefile(baseDirectory.."commithash2.txt", commit)
 local function vapeGithubRequest(scripturl, isImportant)
