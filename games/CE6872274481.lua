@@ -1812,6 +1812,13 @@ bedwars.StoreController:registerUpdateIndex(function() bedwars.StoreController:u
 bedwars.StoreController:registerUpdateIndex(function() bedwars.StoreController:executeStoreTable() end, 0.5)
 bedwars.StoreController:registerUpdateIndex(function() if store.equippedKit == "wind_walker" then bedwars.StoreController:updateZephyrOrbe() end end, 0.5)--]]
 
+function bedwars.StoreController:updateQueueType()
+	local att = game:GetService("Workspace"):GetAttribute("QueueType")
+	if att then
+		store.queueType = att
+	end
+end
+
 function bedwars.StoreController:updateStore()
 	task.spawn(function() pcall(function() self:updateLocalHand() end) end)
 	task.wait(0.1)
@@ -1823,15 +1830,18 @@ function bedwars.StoreController:updateStore()
 	task.wait(0.1)
 	task.spawn(function() pcall(function() self:updateStoreBlocks() end) end)
 	task.wait(0.1)
-	task.spawn(function() pcall(function() self:executeStoreTable() end) end)
 	if store.equippedKit == "wind_walker" then
 		task.wait(0.1)
 		task.spawn(function() pcall(function() self:updateZephyrOrb() end) end)
 	end
+	if store.queueType == "bedwars_test" then
+		task.spawn(function() pcall(function() self:updateQueueType() end) end)
+	end
 end
+
 pcall(function() bedwars.StoreController:updateStore() end)
 
-for i, v in pairs({"MatchEndEvent", "EntityDeathEvent", "EntityDamageEvent", "BedwarsBedBreak", "BalloonPopped", "AngelProgress"}) do
+for i, v in pairs({"MatchEndEvent", "EntityDeathEvent", "BedwarsBedBreak", "BalloonPopped", "AngelProgress"}) do
 	bedwars.Client:WaitFor(v):andThen(function(connection)
 		table.insert(vapeConnections, connection:Connect(function(...)
 			vapeEvents[v]:Fire(...)
