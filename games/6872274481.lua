@@ -683,6 +683,9 @@ local function coreswitch(tool, ignore)
 end
 
 local function switchItem(tool, delayTime)
+	if tool ~= nil and type(tool) == "string" then
+		tool = getItem(tool) and getItem(tool).tool
+	end
 	local _tool = lplr.Character and lplr.Character:FindFirstChild('HandInvItem') and lplr.Character:FindFirstChild('HandInvItem').Value or nil
 	if _tool ~= nil and _tool ~= tool then
 		coreswitch(tool, true)
@@ -6804,9 +6807,9 @@ run(function()
 			local suc, isWool = pcall(function() return store.localHand.itemType:find('wool') end)
 			if not suc then isWool = false end
 			if not WoolOnly.Enabled or isWool then
-				return store.hand.tool.Name, store.hand.amount
+				return store.hand.itemType, store.hand.amount
 			end
-		elseif (not LimitItem.Enabled) then
+		elseif (not LimitItem.Enabled) or AutoSwitch.Enabled then
 			local wool, amount = getWool()
 			if wool then
 				return wool, amount
