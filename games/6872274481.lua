@@ -2194,11 +2194,7 @@ run(function()
 							end
 						end
 					elseif store.hand.toolType == 'sword' then
-						if bedwars.SwordController:getChargeState() ~= 'IDLE' then
-							bedwars.SwordController:stopCharging(store.hand.tool.Name)
-							bedwars.SwordController.chargingMaid:DoCleaning()
-						end
-						bedwars.SwordController:swingSwordAtMouse(0.39)
+						bedwars.SwordController:swingSwordAtMouse()
 					end
 				end
 	
@@ -2290,7 +2286,7 @@ run(function()
 		Function = function(callback)
 			if callback then
 				AimAssist:Clean(runService.Heartbeat:Connect(function(dt)
-					if entitylib.isAlive and store.hand.toolType == 'sword' and ((not ClickAim.Enabled) or (os.clock() - bedwars.SwordController.lastSwing) < 0.4) then
+					if entitylib.isAlive and store.hand.toolType == 'sword' and ((not ClickAim.Enabled) or (workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) < 0.4) then
 						local ent = KillauraTarget.Enabled and store.KillauraTarget or entitylib.EntityPosition({
 							Range = Distance.Value,
 							Part = 'RootPart',
@@ -2592,6 +2588,11 @@ run(function()
 		AttackRemote = bedwars.Client:Get(remotes.AttackEntity).instance
 	end)
 
+	local lastSwingServerTime = 0
+	local lastSwingServerTimeDelta = 0
+
+	local OneTapCooldown = {Value = 5}
+
 	local function createRangeCircle()
 		local suc, err = pcall(function()
 			if (not shared.CheatEngineMode) then
@@ -2641,18 +2642,19 @@ run(function()
 		end
 
 		if LegitAura.Enabled then
-			if (os.clock() - bedwars.SwordController.lastSwing) > 0.2 then return false end
+			if (workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) > 0.2 then return false end
 		end
 
 		return sword, meta
 	end
 
-	local ChargeRatio = {Value = 9}
-
 	Killaura = vape.Categories.Blatant:CreateModule({
 		Name = 'Killaura',
 		Function = function(callback)
 			if callback then
+				lastSwingServerTime = Workspace:GetServerTimeNow()
+                lastSwingServerTimeDelta = 0
+
 				if RangeCircle.Enabled then
 					createRangeCircle()	
 				end
@@ -2748,6 +2750,7 @@ run(function()
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
+								if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
 								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
@@ -2786,7 +2789,13 @@ run(function()
 								if actualRoot then
 									local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
 									local pos = selfpos + dir * math.max(delta.Magnitude - 14.399, 0)
+									
 									bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
+                                    bedwars.SwordController.lastSwingServerTime = workspace:GetServerTimeNow()
+
+									lastSwingServerTimeDelta = workspace:GetServerTimeNow() - lastSwingServerTime
+                                    lastSwingServerTime = workspace:GetServerTimeNow()
+									
 									store.attackReach = (delta.Magnitude * 100) // 1 / 100
 									store.attackReachUpdate = tick() + 1
 									if isClaw then
@@ -2794,7 +2803,7 @@ run(function()
 									else
 										AttackRemote:FireServer({
 											weapon = sword.tool,
-											chargeRatio = ChargeRatio.Value/10,
+											chargedAttack = {chargeRatio = 0},
 											entityInstance = v.Character,
 											validate = {
 												raycast = {
@@ -2803,7 +2812,8 @@ run(function()
 												},
 												targetPosition = {value = actualRoot.Position},
 												selfPosition = {value = pos}
-											}
+											},
+                                            lastSwingServerTimeDelta = bedwars.SwordController.lastSwingServerTimeDelta
 										})
 									end
 								end
@@ -2882,12 +2892,12 @@ run(function()
 			return val == 1 and 'stud' or 'studs'
 		end
 	})
-	ChargeRatio = Killaura:CreateSlider({
-		Name = "Charge Ratio",
+	OneTapCooldown = Killaura:CreateSlider({
+		Name = "OneTap Cooldown",
 		Function = function() end,
 		Min = 0,
-		Max = 10,
-		Default = 6.5
+		Max = 5,
+		Default = 5
 	})
 	RangeCircle = Killaura:CreateToggle({
 		Name = "Range Visualiser",

@@ -1,5 +1,5 @@
 repeat task.wait() until game:IsLoaded()
-if shared.packet then shared.packet:Uninject() end
+if shared.packet then shared.packet:Uninject(); shared.VapeExecuted = false end
 
 if identifyexecutor and ({identifyexecutor()})[1] == 'Argon' then
 	getgenv().setthreadidentity = nil
@@ -39,6 +39,7 @@ local cloneref = cloneref or function(obj)
 	return obj
 end
 local playersService = cloneref(game:GetService('Players'))
+shared.VapeExecuted = true
 
 local oldtbl = {}
 local function finishLoading()
