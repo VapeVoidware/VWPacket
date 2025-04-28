@@ -2813,7 +2813,7 @@ run(function()
 												targetPosition = {value = actualRoot.Position},
 												selfPosition = {value = pos}
 											},
-                                            lastSwingServerTimeDelta = bedwars.SwordController.lastSwingServerTimeDelta
+                                            lastSwingServerTimeDelta = lastSwingServerTimeDelta
 										})
 									end
 								end
