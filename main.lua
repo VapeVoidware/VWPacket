@@ -109,10 +109,10 @@ local function finishLoading()
 					if isfile('vwpacket/NewMainScript.lua') then
 						loadstring(readfile("vwpacket/NewMainScript.lua"))()
 					else
-						
+						loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWPacket/main/NewMainScript.lua", true))()
 					end
 				else
-					
+					loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWPacket/main/NewMainScript.lua", true))()
 				end
 			]]
 			if shared.VapeDeveloper then
