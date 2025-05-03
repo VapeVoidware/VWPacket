@@ -1,6 +1,7 @@
 local lplr = game:GetService("Players").LocalPlayer
 local store = shared.GlobalStore
 local vape = shared.vape
+local gameCamera = game.Workspace.CurrentCamera
 
 task.spawn(function()
     pcall(function()
