@@ -132,6 +132,7 @@ local function run(func)
 end
 
 local entitylib = shared.vape.entitylib
+local entityLibrary = entitylib
 local lplr = game:GetService("Players").LocalPlayer
 
 run(function()
@@ -872,3 +873,518 @@ if not shared.CheatEngineMode then
 		})
 	end)
 end
+
+if not shared.CheatEngineMode then
+	run(function()
+		local KnitInit, Knit
+		repeat
+			KnitInit, Knit = pcall(function()
+				return debug.getupvalue(require(game:GetService("Players").LocalPlayer.PlayerScripts.TS.knit).setup, 6)
+			end)
+			if KnitInit then break end
+			task.wait()
+		until KnitInit
+
+		if not debug.getupvalue(Knit.Start, 1) then
+			repeat task.wait() until debug.getupvalue(Knit.Start, 1)
+		end
+
+		local Players = game:GetService("Players")
+
+		shared.PERMISSION_CONTROLLER_HASANYPERMISSIONS_REVERT = shared.PERMISSION_CONTROLLER_HASANYPERMISSIONS_REVERT or Knit.Controllers.PermissionController.hasAnyPermissions
+		shared.MATCH_CONTROLLER_GETPLAYERPARTY_REVERT = shared.MATCH_CONTROLLER_GETPLAYERPARTY_REVERT or Knit.Controllers.MatchController.getPlayerParty
+
+		local AC_MOD_View = {
+			playerConnections = {},
+			Enabled = false,
+			Friends = {}, 
+			parties = {}, 
+			teamMap = {}, 
+			display = {},
+			isRefreshing = false,
+			cacheDirty = true,
+			disable_disguises = false,
+			disguises = {},
+			teamData = {}
+		}
+
+		AC_MOD_View.controller = Knit.Controllers.PermissionController
+		AC_MOD_View.match_controller = Knit.Controllers.MatchController
+
+		function AC_MOD_View:getPartyById(displayId)
+			if not displayId then return end
+			displayId = tostring(displayId)
+			if self.display[displayId] then return self.display[displayId] end
+			for _, party in pairs(self.parties) do
+				if party.displayId == tostring(displayId) then
+					self.display[displayId] = party
+					return party
+				end
+			end
+		end
+
+		function AC_MOD_View:refreshDisplayCache()
+			for _, plr in pairs(Players:GetPlayers()) do
+				local playerId = tostring(plr.UserId)
+
+				local playerPartyId = self.teamMap[playerId]
+				if playerPartyId ~= nil then
+					self:getPartyById(playerPartyId)
+				end
+				task.wait()
+			end
+		end
+
+		function AC_MOD_View:refreshDisplayCacheAsync()
+			task.spawn(self.refreshDisplayCache, self)
+		end
+
+		function AC_MOD_View:getPlayerTeamData(plr)
+			if self.teamData[plr] then return self.teamData[plr] end
+
+			self.teamData[plr] = {}
+
+			local teamMembers = {}
+			local playerTeam = plr.Team 
+			if not playerTeam then
+				return teamMembers 
+			end
+
+			local playerId = tostring(plr.UserId)
+			self.Friends[playerId] = self.Friends[playerId] or {}
+
+			for _, otherPlayer in pairs(Players:GetPlayers()) do
+				if otherPlayer == plr then continue end 
+
+				local otherPlayerId = tostring(otherPlayer.UserId)
+				local areFriends = self.Friends[playerId][otherPlayerId]
+
+				if areFriends == nil then
+					local suc, res = pcall(function()
+						return plr:IsFriendsWith(otherPlayer.UserId)
+					end)
+					areFriends = suc and res or false
+
+					if suc then
+						self.Friends[playerId][otherPlayerId] = areFriends
+						self.Friends[otherPlayerId] = self.Friends[otherPlayerId] or {}
+						self.Friends[otherPlayerId][playerId] = areFriends
+					end
+				end
+
+				if areFriends and otherPlayer.Team == playerTeam then
+					table.insert(teamMembers, otherPlayerId)
+				end
+			end
+
+			self.teamData[plr] = teamMembers
+
+			return teamMembers
+		end
+
+		function AC_MOD_View:refreshPlayerTeamData()
+			for i,v in pairs(Players:GetPlayers()) do
+				self:getPlayerTeamData(v)
+				task.wait()
+			end
+		end
+
+		function AC_MOD_View:refreshPlayerTeamDataAsync()
+			task.spawn(self.refreshPlayerTeamData, self)
+		end
+
+		function AC_MOD_View:refreshTeamMap()
+			local allTeams = {}
+			for _, p in pairs(Players:GetPlayers()) do
+				local teamMembers = self:getPlayerTeamData(p)
+				if teamMembers and #teamMembers > 0 then 
+					allTeams[p] = teamMembers
+				end
+			end
+
+			local validTeams = {}
+			for playerInTeams, members in pairs(allTeams) do
+				local playerIdInTeams = tostring(playerInTeams.UserId)
+				local cleanedMembers = {}
+
+				for _, memberId in pairs(members) do
+					local memberIdStr = tostring(memberId)
+					if memberIdStr == playerIdInTeams then
+						print("Warning: Player " .. playerIdInTeams .. " has themselves in their team list.")
+					else
+						table.insert(cleanedMembers, memberIdStr)
+					end
+				end
+
+				if #cleanedMembers > 0 then
+					validTeams[playerInTeams] = cleanedMembers
+				end
+			end
+
+			self.parties = {}
+			self.teamMap = {}
+			local teamId = 0
+			for playerInTeams, members in pairs(validTeams) do
+				local playerIdInTeams = tostring(playerInTeams.UserId)
+				if not self.teamMap[playerIdInTeams] then
+					self.teamMap[playerIdInTeams] = teamId
+					table.insert(self.parties, {
+						displayId = tostring(teamId),
+						members = members
+					})
+					teamId = teamId + 1
+
+					for _, memberId in pairs(members) do
+						self.teamMap[memberId] = teamId - 1
+					end
+				end
+			end
+
+			self.cacheDirty = false
+			self.isRefreshing = false
+		end
+
+		function AC_MOD_View:refreshTeamMapAsync()
+			if self.isRefreshing then return end 
+			self.isRefreshing = true
+			task.spawn(function()
+				self:refreshTeamMap()
+			end)
+		end
+
+		function AC_MOD_View:getPlayerParty(plr)
+			if not plr or not plr:IsA("Player") then
+				return nil
+			end
+
+			local playerId = tostring(plr.UserId)
+
+			if self.cacheDirty or not next(self.teamMap) then
+				self:refreshTeamMapAsync()
+			end
+
+			local playerPartyId = self.teamMap[playerId]
+			if playerPartyId ~= nil then
+				return self:getPartyById(playerPartyId)
+			end
+
+			return nil 
+		end
+
+		AC_MOD_View.mockGetPlayerParty = function(self, plr)
+			local parties = self.parties 
+			if parties ~= nil and #parties > 0 then
+				return shared.MATCH_CONTROLLER_GETPLAYERPARTY_REVERT(self, plr)
+			end
+			return AC_MOD_View:getPlayerParty(plr)
+		end
+
+		function AC_MOD_View:toggleDisableDisguises()
+			if not self.Enabled then return end
+			if self.disable_disguises then
+				for _,v in pairs(Players:GetPlayers()) do
+					if v == Players.LocalPlayer then continue end
+					if tostring(v:GetAttribute("Disguised")) == "true" then
+						v:SetAttribute("Disguised", false)
+						InfoNotification("Remove Disguises", "Disabled streamer mode for "..tostring(v.Name).."!", 3)
+						table.insert(self.disguises, v)
+					end
+				end
+			else
+				for i,v in pairs(self.disguises) do
+					if tostring(v:GetAttribute("Disguised")) ~= "true" then
+						v:SetAttribute("Disguised", true)
+						InfoNotification("Remove Disguises", "Re - enabled Streamer mode for "..tostring(v.Name).."!", 2)
+					end
+				end
+				table.clear(self.disguises)
+			end
+		end
+
+		function AC_MOD_View:refreshCore()
+			self:refreshTeamMapAsync()
+			self:refreshDisplayCacheAsync()
+			self:refreshPlayerTeamDataAsync()
+
+			self:toggleDisableDisguises()
+		end
+
+		function AC_MOD_View:refreshCoreAsync()
+			task.spawn(self.refreshCore, self)
+		end
+
+		function AC_MOD_View:init()
+			self.Enabled = true
+			self.controller.hasAnyPermissions = function(self)
+				return true
+			end
+			self.match_controller.getPlayerParty = self.mockGetPlayerParty
+
+			self.playerConnections = {
+				added = Players.PlayerAdded:Connect(function(player)
+					self.cacheDirty = true
+					self:refreshCoreAsync()
+					player:GetPropertyChangedSignal("Team"):Connect(function()
+						self.cacheDirty = true
+						self:refreshCoreAsync()
+					end)
+				end),
+				removed = Players.PlayerRemoving:Connect(function(player)
+					local playerId = tostring(player.UserId)
+					self.Friends[playerId] = nil 
+					for _, cache in pairs(self.Friends) do
+						cache[playerId] = nil
+					end
+					self.cacheDirty = true
+					self:refreshCoreAsync()
+				end)
+			}
+
+			self:refreshCore()
+		end
+
+		function AC_MOD_View:disable()
+			self.Enabled = false
+
+			self.controller.hasAnyPermissions = shared.PERMISSION_CONTROLLER_HASANYPERMISSIONS_REVERT
+			self.match_controller.getPlayerParty = shared.MATCH_CONTROLLER_GETPLAYERPARTY_REVERT
+
+			if self.playerConnections then
+				for _, v in pairs(self.playerConnections) do
+					pcall(function() v:Disconnect() end)
+				end
+				table.clear(self.playerConnections)
+			end
+
+			self.parties = {}
+			self.teamMap = {}
+			self.Friends = {}
+			self.display = {}
+			self.teamData = {}
+			self.cacheDirty = true
+
+			self:toggleDisableDisguises()
+		end
+
+		AC_MOD_View.moduleInstance = vape.Categories.World:CreateModule({
+			Name = "AC MOD View",
+			Function = function(call)
+				if call then
+					AC_MOD_View:init()
+				else
+					AC_MOD_View:disable()
+				end
+			end
+		})
+
+		AC_MOD_View.disableDisguisesToggle = AC_MOD_View.moduleInstance:CreateToggle({
+			Name = "Remove Disguises",
+			Function = function(call)
+				AC_MOD_View.disable_disguises = call
+				AC_MOD_View:toggleDisableDisguises()
+			end,
+			Default = true
+		})
+	end)
+end
+
+run(function()
+    local BedAssist = {Enabled = false}
+    local bedassistrange = {Value = 30}
+    local bedassistsmoothness = {Value = 6}
+    local bedassistangle = {Value = 70}
+    local bedassistfirstperson = {Enabled = false}
+    local bedassistshopcheck = {Enabled = false}
+
+    local camera = workspace.CurrentCamera
+    local runService = game:GetService("RunService")
+    local collectionService = game:GetService("CollectionService")
+    local lplr = game.Players.LocalPlayer
+
+    local beds = {}
+    local Connections = {}
+
+    local function isFirstPerson()
+        if not (lplr.Character and lplr.Character:FindFirstChild("Head")) then return false end
+        return (lplr.Character.Head.Position - camera.CFrame.Position).Magnitude < 2
+    end
+
+    local function getClosestEnemyBed(playerPos)
+        local closestBed = nil
+        local closestDistance = bedassistrange.Value
+
+        for _, bed in pairs(beds) do
+            if bed.Parent ~= nil then
+                if bed.Name == "bed" and tostring(bed:GetAttribute("TeamId")) == tostring(lplr:GetAttribute("Team")) then
+                    continue
+                end
+                if bed:GetAttribute("BedShieldEndTime") and bed:GetAttribute("BedShieldEndTime") > game.Workspace:GetServerTimeNow() then
+                    continue
+                end
+                local distance = (playerPos - bed.Position).Magnitude
+                if distance <= closestDistance then
+                    local delta = (bed.Position - playerPos)
+                    local localfacing = lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") and lplr.Character.HumanoidRootPart.CFrame.LookVector * Vector3.new(1, 0, 1) or Vector3.new(1, 0, 0)
+                    local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+                    if angle <= math.rad(bedassistangle.Value) / 2 then
+                        closestDistance = distance
+                        closestBed = bed
+                    end
+                end
+            end
+        end
+
+        return closestBed
+    end
+
+    BedAssist = vape.Categories.Utility:CreateModule({
+        Name = "BedAssist",
+        Function = function(callback)
+            if callback then
+                beds = collectionService:GetTagged("bed")
+                local connection
+                connection = runService.Heartbeat:Connect(function(dt)
+                    if not BedAssist.Enabled then
+                        connection:Disconnect()
+                        camera.CameraType = Enum.CameraType.Custom
+                        return
+                    end
+                    if not entityLibrary.isAlive then
+                        return
+                    end
+                    if bedassistfirstperson.Enabled and not isFirstPerson() then
+                        return
+                    end
+                    if bedassistshopcheck.Enabled then
+                        local isShop = lplr:FindFirstChild("PlayerGui") and lplr.PlayerGui:FindFirstChild("ItemShop")
+                        if isShop then return end
+                    end
+
+                    local playerPos = entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position
+                    local closestBed = getClosestEnemyBed(playerPos)
+
+                    if closestBed then
+                        local bedPos = closestBed.Position
+                        local currentCFrame = camera.CFrame
+                        local targetCFrame = CFrame.lookAt(currentCFrame.Position, bedPos)
+                        local lerpAmount = bedassistsmoothness.Value / 2
+                        camera.CFrame = currentCFrame:Lerp(targetCFrame, lerpAmount * dt)
+                    end
+                end)
+                table.insert(Connections, connection)
+            else
+                for _, v in pairs(Connections) do
+                    pcall(function()
+                        v:Disconnect()
+                    end)
+                end
+                Connections = {}
+                table.clear(beds)
+                camera.CameraType = Enum.CameraType.Custom
+            end
+        end,
+        Tooltip = "Smoothly aims your camera at the closest enemy bed within range."
+    })
+
+    bedassistrange = BedAssist:CreateSlider({
+        Name = "Assist Range",
+        Min = 10,
+        Max = 100,
+        Function = function(val) end,
+        Default = 30,
+        Suffix = function(val) 
+            return val == 1 and "stud" or "studs" 
+        end
+    })
+
+    bedassistsmoothness = BedAssist:CreateSlider({
+        Name = "Aim Speed",
+        Min = 1,
+        Max = 20,
+        Function = function(val) end,
+        Default = 6
+    })
+
+    bedassistangle = BedAssist:CreateSlider({
+        Name = "Max Angle",
+        Min = 10,
+        Max = 360,
+        Function = function(val) end,
+        Default = 70
+    })
+
+    bedassistfirstperson = BedAssist:CreateToggle({
+        Name = "First Person Only",
+        Function = function() end,
+        Default = false,
+        Tooltip = "Only activates in first-person mode."
+    })
+
+    bedassistshopcheck = BedAssist:CreateToggle({
+        Name = "Shop Check",
+        Function = function() end,
+        Default = false,
+        Tooltip = "Disables aiming when in the shop menu."
+    })
+
+    table.insert(Connections, collectionService:GetInstanceAddedSignal("bed"):Connect(function(bed)
+        table.insert(beds, bed)
+    end))
+
+    table.insert(Connections, collectionService:GetInstanceRemovedSignal("bed"):Connect(function(bed)
+        local i = table.find(beds, bed)
+        if i then
+            table.remove(beds, i)
+        end
+    end))
+end)
+
+pcall(function()
+    local function sreadfile(filename)
+        local suc, content = pcall(readfile, filename)
+        if not suc then
+            warn("Failed to read file " .. filename .. ": " .. tostring(content))
+            return nil
+        end
+        return content
+    end
+
+    local function createSandbox()
+        return setmetatable({AutoWinModule = AutoWinModule, shared = shared}, {__index = getgenv()})
+    end
+
+    local function errorHandler(err)
+        local stackTrace = debug.traceback("Error in loaded script: " .. tostring(err), 2)
+        warn(stackTrace)
+        return nil
+    end
+
+    local function executeProtected()
+        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/ProjectThingy.lua", true)
+        if not scriptContent then
+            return false, "Failed to load script content"
+        end
+
+        local suc, func = pcall(loadstring, scriptContent)
+        if not suc then
+            warn("Failed to compile script: " .. tostring(func))
+            return false, func
+        end
+
+		pcall(function()
+			setfenv(func, createSandbox())
+		end)
+
+        local suc, res = xpcall(func, errorHandler)
+        if not suc then
+            return false, res
+        end
+
+        return true, res
+    end
+
+    local suc, res = executeProtected()
+    if not suc then
+        print("Script execution failed: " .. tostring(res))
+    end
+end)

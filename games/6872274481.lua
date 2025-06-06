@@ -6319,6 +6319,53 @@ run(function()
 			end
 		end
 	end
+	
+	local sides = {}
+    for _, v in Enum.NormalId:GetEnumItems() do
+        if v.Name == "Bottom" then continue end
+        table.insert(sides, Vector3.FromNormalId(v) * 3)
+    end
+
+    local function findClosestBreakableBlock(start, playerPos)
+		local closestBlock = nil
+		local closestDistance = math.huge
+		local closestPos = nil
+		local closestNormal = nil
+
+		local vectorToNormalId = {
+			[Vector3.new(1, 0, 0)] = Enum.NormalId.Right,
+			[Vector3.new(-1, 0, 0)] = Enum.NormalId.Left,
+			[Vector3.new(0, 1, 0)] = Enum.NormalId.Top,
+			[Vector3.new(0, -1, 0)] = Enum.NormalId.Bottom,
+			[Vector3.new(0, 0, 1)] = Enum.NormalId.Front,
+			[Vector3.new(0, 0, -1)] = Enum.NormalId.Back
+		}
+
+		for _, side in sides do
+			for i = 1, 15 do
+				local blockPos = start + (side * i)
+				local block = getPlacedBlock(blockPos)
+				if not block or block:GetAttribute("NoBreak") then break end
+				if bedwars.BlockController:isBlockBreakable({blockPosition = blockPos / 3}, lplr) then
+					local distance = (playerPos - blockPos).Magnitude
+					if distance < closestDistance then
+						closestDistance = distance
+						closestBlock = block
+						closestPos = blockPos
+						local normalizedSide = side.Unit 
+						for vector, normalId in pairs(vectorToNormalId) do
+							if (normalizedSide - vector).Magnitude < 0.01 then 
+								closestNormal = normalId
+								break
+							end
+						end
+					end
+				end
+			end
+		end
+
+		return closestBlock, closestPos, closestNormal
+	end
 
 	local Nuker = {Enabled = false}
 	local nukerrange = {Value = 1}
@@ -6331,6 +6378,7 @@ run(function()
 	local nukerluckyblock = {Enabled = false}
 	local nukerironore = {Enabled = false}
 	local nukerbeds = {Enabled = false}
+	local nukerclosestblock = {Enabled = false}
 	local nukercustom = {RefreshValues = function() end, ObjectList = {}}
 	local luckyblocktable = {}
 
@@ -6374,12 +6422,23 @@ run(function()
 										if ((entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position) - obj.Position).magnitude <= nukerrange.Value then
 											if tool and bedwars.ItemTable[tool.Name].breakBlock and bedwars.BlockController:isBlockBreakable({blockPosition = obj.Position / 3}, lplr) then
 												nearbed = true
-												local res, amount = getBestBreakSide(obj.Position)
-												local res2, amount2 = getBestBreakSide(obj.Position + Vector3.new(0, 0, 3))
-												broke = true
-												breakBlock((amount < amount2 and obj.Position or obj.Position + Vector3.new(0, 0, 3)), nukereffects.Enabled, (amount < amount2 and res or res2), false, nukeranimation.Enabled)
-												task.wait(nukerslowmode.Value ~= 0 and nukerslowmode.Value/10 or 0)
-												break
+												if nukerclosestblock.Enabled then
+                                                    local playerPos = entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position
+                                                    local closestBlock, closestPos, closestNormal = findClosestBreakableBlock(obj.Position, playerPos)
+                                                    if closestBlock and closestPos then
+                                                        broke = true
+                                                        breakBlock(closestPos, nukereffects.Enabled, closestNormal, false, nukeranimation.Enabled)
+                                                        task.wait(nukerslowmode.Value ~= 0 and nukerslowmode.Value/10 or 0)
+                                                        break
+                                                    end
+                                                else
+                                                    local res, amount = getBestBreakSide(obj.Position)
+                                                    local res2, amount2 = getBestBreakSide(obj.Position + Vector3.new(0, 0, 3))
+                                                    broke = true
+                                                    breakBlock((amount < amount2 and obj.Position or obj.Position + Vector3.new(0, 0, 3)), nukereffects.Enabled, (amount < amount2 and res or res2), false, nukeranimation.Enabled)
+                                                    task.wait(nukerslowmode.Value ~= 0 and nukerslowmode.Value/10 or 0)
+                                                    break
+                                                end
 											end
 										end
 									end
@@ -6459,6 +6518,12 @@ run(function()
 		Name = "Fly Disable",
 		Function = function() end
 	})
+	nukerclosestblock = Nuker:CreateToggle({
+        Name = "Break Closest Block",
+        Function = function(callback) end,
+        Default = false,
+        Tooltip = "Breaks the closest block when targeting beds, making it less blatant."
+    })
 	nukerluckyblock = Nuker:CreateToggle({
 		Name = "Break LuckyBlocks",
 		Function = function(callback)
@@ -8579,6 +8644,162 @@ run(function()
 			Default = true
 		})
 	end
+end)
+
+run(function()
+	local replicatedStorage = game:GetService("ReplicatedStorage")
+	local guiService = game:GetService("GuiService")
+
+	local AutoBank
+	local UIToggle
+	local UI
+	local Chests
+	local Items = {}
+
+	local AutoBankMode = {Value = "Toggle"}
+	
+	local function addItem(itemType, shop)
+		local item = Instance.new('ImageLabel')
+		item.Image = bedwars.getIcon({itemType = itemType}, true)
+		item.Size = UDim2.fromOffset(32, 32)
+		item.Name = itemType
+		item.BackgroundTransparency = 1
+		item.LayoutOrder = #UI:GetChildren()
+		item.Parent = UI
+		local itemtext = Instance.new('TextLabel')
+		itemtext.Name = 'Amount'
+		itemtext.Size = UDim2.fromScale(1, 1)
+		itemtext.BackgroundTransparency = 1
+		itemtext.Text = ''
+		itemtext.TextColor3 = Color3.new(1, 1, 1)
+		itemtext.TextSize = 16
+		itemtext.TextStrokeTransparency = 0.3
+		itemtext.Font = Enum.Font.Arial
+		itemtext.Parent = item
+		Items[itemType] = {Object = itemtext, Type = shop}
+	end
+	
+	local function refreshBank(echest)
+		for i, v in Items do
+			local item = echest:FindFirstChild(i)
+			v.Object.Text = item and item:GetAttribute('Amount') or ''
+		end
+	end
+	
+	local function nearChest()
+		if entitylib.isAlive then
+			local pos = entitylib.character.HumanoidRootPart.Position
+			for _, chest in Chests do
+				if (chest.Position - pos).Magnitude < 20 then
+					return true
+				end
+			end
+		end
+	end
+	
+	local function handleState()
+		local chest = replicatedStorage.Inventories:FindFirstChild(lplr.Name..'_personal')
+		if not chest then return end
+	
+		local mapCF = workspace.MapCFrames:FindFirstChild((lplr:GetAttribute('Team') or 1)..'_spawn')
+		if AutoBankMode.Value ~= "Toggle" then
+			if not nearChest() then
+				warningNotification("AutoBank", "No chest close by.", 3)
+			else
+				warningNotification("AutoBank", "Successfully stored the loot in a personal chest!", 3)
+			end
+		end
+		if mapCF and nearChest() then
+			for _, v in chest:GetChildren() do
+				local item = Items[v.Name]
+				if item then
+					task.spawn(function()
+						bedwars.Client:GetNamespace('Inventory'):Get('ChestGetItem'):CallServer(chest, v)
+						refreshBank(chest)
+					end)
+				end
+			end
+		else
+			for _, v in store.inventory.inventory.items do
+				local item = Items[v.itemType]
+				if item then
+					task.spawn(function()
+						bedwars.Client:GetNamespace('Inventory'):Get('ChestGiveItem'):CallServer(chest, v.tool)
+						refreshBank(chest)
+					end)
+				end
+			end
+		end
+	end
+	
+	AutoBank = vape.Categories.Utility:CreateModule({
+		Name = 'AutoBank',
+		Function = function(callback)
+			if callback then
+				Chests = collection('personal-chest', AutoBank)
+				UI = Instance.new('Frame')
+				UI.Size = UDim2.new(1, 0, 0, 32)
+				UI.Position = UDim2.fromOffset(0, -240)
+				UI.BackgroundTransparency = 1
+				UI.Visible = UIToggle.Enabled
+				UI.Parent = vape.gui
+				AutoBank:Clean(UI)
+				local Sort = Instance.new('UIListLayout')
+				Sort.FillDirection = Enum.FillDirection.Horizontal
+				Sort.HorizontalAlignment = Enum.HorizontalAlignment.Center
+				Sort.SortOrder = Enum.SortOrder.LayoutOrder
+				Sort.Parent = UI
+				addItem('iron', true)
+				addItem('gold', true)
+				addItem('diamond', false)
+				addItem('emerald', true)
+				addItem('void_crystal', true)
+	
+				task.spawn(function()
+					repeat
+						local hotbar = lplr.PlayerGui:FindFirstChild('hotbar')
+						hotbar = hotbar and hotbar['1']:FindFirstChild('HotbarHealthbarContainer')
+						if hotbar then
+							UI.Position = UDim2.fromOffset(0, (hotbar.AbsolutePosition.Y + guiService:GetGuiInset().Y) - 40)
+						end
+		
+						--local newState = nearChest()
+						--if newState then
+							handleState()
+						--end
+		
+						task.wait(0.1)
+					until (not AutoBank.Enabled)
+				end)
+
+				if AutoBankMode.Value ~= "Toggle" then
+					AutoBank:Toggle()
+				end
+			else
+				table.clear(Items)
+			end
+		end,
+		Tooltip = 'Automatically puts resources in ender chest'
+	})
+	AutoBankMode = AutoBank:CreateDropdown({
+		Name = "Activation",
+		List = {"On Key", "Toggle"},
+		Function = function()
+			if AutoBank.Enabled then
+				AutoBank:Toggle()
+				AutoBank:Toggle()
+			end
+		end
+	})
+	UIToggle = AutoBank:CreateToggle({
+		Name = 'UI',
+		Function = function(callback)
+			if AutoBank.Enabled then
+				UI.Visible = callback
+			end
+		end,
+		Default = true
+	})
 end)
 
 --VoidwareFunctions.GlobaliseObject("store", store)

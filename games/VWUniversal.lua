@@ -1244,6 +1244,9 @@ run(function()
         TypeWrite = false,
         DragEnabled = false,
         CleanOld = false,
+		Joins = false,
+		Leaves = false,
+		Enabled = false,
         Transparency = 1,
         MaxMessages = 50 
     }
@@ -1484,6 +1487,7 @@ run(function()
     CustomChat = vape.Categories.World:CreateModule({
         Name = "CustomChat",
         Function = function(call)
+			Config.Enabled = call
             if call then
                 Players = Players or Services.Players
                 RunService = RunService or Services.RunService
@@ -1881,6 +1885,22 @@ run(function()
                     end
                 end))
 
+				maid:Add(Players.PlayerAdded:Connect(function(player)
+                    if Config.Joins and addMessage then
+                        local playerName = player.DisplayName or player.Name
+                        local message = string.format('<font color="rgb(85, 255, 85)">%s has joined the game.</font>', playerName)
+                        addMessage(message, nil, true)
+                    end
+                end))
+
+                maid:Add(Players.PlayerRemoving:Connect(function(player)
+                    if Config.Leaves and addMessage then
+                        local playerName = player.DisplayName or player.Name
+                        local message = string.format('<font color="rgb(255, 255, 85)">%s has left the game.</font>', playerName)
+                        addMessage(message, nil, true)
+                    end
+                end))
+
                 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
 
                 addMessage("Custom chat enabled successfully!", "System", true, Color3.fromRGB(255, 255, 255))
@@ -1928,10 +1948,12 @@ run(function()
         end
     })
     for i, v in pairs(Config) do
-        if i == "TypeWrite" or i == "DragEnabled" or i == "CleanOld" or i == "Transparency" or i == "MaxMessages" then continue end
+        if i == "TypeWrite" or i == "DragEnabled" or i == "CleanOld" or i == "Transparency" or i == "MaxMessages" or i == "Enabled" then continue end
         CustomChat:CreateToggle({
             Name = "Display "..tostring(i),
-            Function = function(call) Config[i] = call end,
+            Function = function(call) 
+				Config[i] = call; 
+			end,
             Default = true
         })
     end
