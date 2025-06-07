@@ -278,6 +278,7 @@ local prediction = loadstring(game:HttpGet("https://raw.githubusercontent.com/Va
 --pload('libraries/prediction.lua', true, true)
 --loadstring(downloadFile('vape/libraries/prediction.lua'), 'prediction')()
 entitylib = loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/libraries/entity.lua", true))()
+shared.ENTITY_LIBRARY = entitylib
 --pload('libraries/entity.lua', true, true)
 --loadstring(downloadFile('vape/libraries/entity.lua'), 'entitylibrary')()
 local whitelist = {

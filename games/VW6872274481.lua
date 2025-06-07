@@ -1260,6 +1260,8 @@ run(function()
         return closestBed
     end
 
+	local entityLibrary = shared.ENTITY_LIBRARY or entityLibrary
+
     BedAssist = vape.Categories.Utility:CreateModule({
         Name = "BedAssist",
         Function = function(callback)
