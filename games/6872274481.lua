@@ -4767,6 +4767,7 @@ run(function()
 				if pos ~= math.huge then
 					AntiVoidPart = Instance.new('Part')
 					AntiVoidPart.Size = Vector3.new(10000, 1, 10000)
+					shared.AntiVoidPart = AntiVoidPart
 					AntiVoidPart.Transparency = 1 - Color.Opacity
 					AntiVoidPart.Material = Enum.Material[Material.Value]
 					AntiVoidPart.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
