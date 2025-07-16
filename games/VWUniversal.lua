@@ -869,324 +869,431 @@ run(function()
 end)
 
 run(function()
-    local lightingService = vape.Services.Lighting
-    local LightingTheme = {Enabled = false}
-    local LightingThemeType = {Value = "LunarNight"}
-    local TintToggle = {Enabled = false}
-    local TintColor = {Hue = 0, Sat = 0, Value = 1}
-    local CustomTimeToggle = {Enabled = false}
-    local TimeOfDaySlider = {Value = 12}
-    local themesky
-    local themeobjects = {}
-    local oldthemesettings = {
-        Ambient = lightingService.Ambient,
-        FogEnd = lightingService.FogEnd,
-        FogStart = lightingService.FogStart,
-        OutdoorAmbient = lightingService.OutdoorAmbient,
-        ClockTime = lightingService.ClockTime
-    }
-
-    local function dumptable(tab, tabtype, sortfunction)
-        local data = {}
-        for i, v in pairs(tab) do
-            local entry = tabtype and tabtype == 1 and i or v
-            table.insert(data, entry)
-        end
-        if sortfunction and type(sortfunction) == "function" then
-            table.sort(data, sortfunction)
-        end
-        return data
-    end
-
-    local themetable = {
-        Purple = function()
-            return {
-                Sky = {
-                    SkyboxBk = "rbxassetid://8539982183",
-                    SkyboxDn = "rbxassetid://8539981943",
-                    SkyboxFt = "rbxassetid://8539981721",
-                    SkyboxLf = "rbxassetid://8539981424",
-                    SkyboxRt = "rbxassetid://8539980766",
-                    SkyboxUp = "rbxassetid://8539981085",
-                    MoonAngularSize = 0,
-                    SunAngularSize = 0,
-                    StarCount = 3000
-                },
-                Lighting = {
-                    Ambient = Color3.fromRGB(170, 0, 255)
-                },
-                Effects = {}
-            }
-        end,
-        Galaxy = function()
-            return {
-                Sky = {
-                    SkyboxBk = "rbxassetid://159454299",
-                    SkyboxDn = "rbxassetid://159454296",
-                    SkyboxFt = "rbxassetid://159454293",
-                    SkyboxLf = "rbxassetid://159454293",
-                    SkyboxRt = "rbxassetid://159454293",
-                    SkyboxUp = "rbxassetid://159454288",
-                    SunAngularSize = 0
-                },
-                Lighting = {
-                    FogEnd = 200,
-                    FogStart = 0,
-                    OutdoorAmbient = Color3.fromRGB(172, 18, 255)
-                },
-                Effects = {}
-            }
-        end,
-        BetterNight = function()
-            return {
-                Sky = {
-                    SkyboxBk = "rbxassetid://155629671",
-                    SkyboxDn = "rbxassetid://12064152",
-                    SkyboxFt = "rbxassetid://155629677",
-                    SkyboxLf = "rbxassetid://155629662",
-                    SkyboxRt = "rbxassetid://155629666",
-                    SkyboxUp = "rbxassetid://155629686",
-                    SunAngularSize = 0
-                },
-                Lighting = {
-                    FogColor = Color3.fromRGB(0, 20, 64)
-                },
-                Effects = {}
-            }
-        end,
-        BetterNight3 = function()
-            return {
-                Sky = {
-                    MoonTextureId = "rbxassetid://1075087760",
-                    SkyboxBk = "rbxassetid://2670643994",
-                    SkyboxDn = "rbxassetid://2670643365",
-                    SkyboxFt = "rbxassetid://2670643214",
-                    SkyboxLf = "rbxassetid://2670643070",
-                    SkyboxRt = "rbxassetid://2670644173",
-                    SkyboxUp = "rbxassetid://2670644331",
-                    MoonAngularSize = 1.5,
-                    StarCount = 500
-                },
-                Lighting = {},
-                Effects = {
-                    ColorCorrection = {
-                        Enabled = true,
-                        TintColor = Color3.fromRGB(189, 179, 178)
-                    },
-                    BlurEffect = {
-                        Enabled = true,
-                        Size = 9
-                    },
-                    BloomEffect = {
-                        Enabled = true,
-                        Intensity = 100,
-                        Size = 56,
-                        Threshold = 5
-                    }
-                }
-            }
-        end,
-        Sunset = function()
-            return {
-                Sky = {
-                    SkyboxBk = "rbxassetid://271042516",
-                    SkyboxDn = "rbxassetid://271077243",
-                    SkyboxFt = "rbxassetid://271042556",
-                    SkyboxLf = "rbxassetid://271042310",
-                    SkyboxRt = "rbxassetid://271042467",
-                    SkyboxUp = "rbxassetid://271077958",
-                    SunAngularSize = 10,
-                    MoonAngularSize = 0
-                },
-                Lighting = {
-                    Ambient = Color3.fromRGB(255, 140, 0),
-                    OutdoorAmbient = Color3.fromRGB(255, 165, 0),
-                    ClockTime = 18 -- 6 PM
-                },
-                Effects = {}
-            }
-        end,
-        Ocean = function()
-            return {
-                Sky = {
-                    SkyboxBk = "rbxassetid://591058823",
-                    SkyboxDn = "rbxassetid://591059876",
-                    SkyboxFt = "rbxassetid://591058104",
-                    SkyboxLf = "rbxassetid://591057861",
-                    SkyboxRt = "rbxassetid://591057625",
-                    SkyboxUp = "rbxassetid://591059642",
-                    SunAngularSize = 15,
-                    MoonAngularSize = 0
-                },
-                Lighting = {
-                    Ambient = Color3.fromRGB(0, 191, 255),
-                    OutdoorAmbient = Color3.fromRGB(135, 206, 235)
-                },
-                Effects = {}
-            }
-        end,
-        SpaceStation = function()
-            return {
-                Sky = {
-                    SkyboxBk = "rbxassetid://166509999",
-                    SkyboxDn = "rbxassetid://166510057",
-                    SkyboxFt = "rbxassetid://166510116",
-                    SkyboxLf = "rbxassetid://166510092",
-                    SkyboxRt = "rbxassetid://166510131",
-                    SkyboxUp = "rbxassetid://166510114",
-                    MoonAngularSize = 0,
-                    SunAngularSize = 0,
-                    StarCount = 5000
-                },
-                Lighting = {
-                    Ambient = Color3.fromRGB(50, 50, 50),
-                    OutdoorAmbient = Color3.fromRGB(100, 100, 150)
-                },
-                Effects = {}
-            }
-        end,
-        LunarNight = function()
-            return {
-                Sky = {
-                    SkyboxBk = "rbxassetid://187713366",
-                    SkyboxDn = "rbxassetid://187712428",
-                    SkyboxFt = "rbxassetid://187712836",
-                    SkyboxLf = "rbxassetid://187713755",
-                    SkyboxRt = "rbxassetid://187714525",
-                    SkyboxUp = "rbxassetid://187712111",
-                    SunAngularSize = 0,
-                    StarCount = 0
-                },
-                Lighting = {
-                    ClockTime = 0 -- Midnight
-                },
-                Effects = {}
-            }
-        end
-    }
-
-    LightingTheme = vape.Categories.World:CreateModule({
-        Name = "LightingTheme",
-        Tooltip = "Add a whole new look to your game.",
-        ExtraText = function() return LightingThemeType.Value end,
-        Function = function(callback)
-            if callback then
-                local themeSettings = themetable[LightingThemeType.Value]()
-                if themeSettings then
-                    if not themesky then
-                        themesky = Instance.new("Sky")
-                        themesky.Parent = lightingService
-                    end
-                    for prop, value in pairs(themeSettings.Sky) do
-                        themesky[prop] = value
-                    end
-                    for prop, value in pairs(themeSettings.Lighting) do
-                        lightingService[prop] = value
-                    end
-                    for effectType, effectProps in pairs(themeSettings.Effects) do
-                        local effect = Instance.new(effectType)
-                        for prop, value in pairs(effectProps) do
-                            effect[prop] = value
-                        end
-                        effect.Parent = game.Workspace
-                        table.insert(themeobjects, effect)
-                    end
-                    if TintToggle.Enabled then
-                        local colorCorrection = Instance.new("ColorCorrectionEffect")
-                        colorCorrection.TintColor = Color3.fromHSV(TintColor.Hue, TintColor.Sat, TintColor.Value)
-                        colorCorrection.Enabled = true
-                        colorCorrection.Parent = game.Workspace
-                        table.insert(themeobjects, colorCorrection)
-                    end
-                    if CustomTimeToggle.Enabled then
-                        lightingService.ClockTime = TimeOfDaySlider.Value
-                    end
-                    LightingTheme:Clean(lightingService.ChildAdded:Connect(function(v)
-                        if v:IsA("Sky") and v ~= themesky then
-                            v.Parent = nil
-                        end
-                    end))
-                end
-            else
-                if themesky then
-                    themesky:Destroy()
-                    themesky = nil
-                end
-                for _, obj in pairs(themeobjects) do
-                    obj:Destroy()
-                end
-                table.clear(themeobjects)
-                for prop, value in pairs(oldthemesettings) do
-                    lightingService[prop] = value
-                end
-            end
-        end
-    })
-
-    LightingThemeType = LightingTheme:CreateDropdown({
-        Name = "Theme",
-        List = dumptable(themetable, 1),
-        Function = function()
-            if LightingTheme.Enabled then
-                LightingTheme:Toggle()
-                LightingTheme:Toggle()
-            end
-        end
-    })
-
-    TintToggle = LightingTheme:CreateToggle({
-        Name = "Enable Tint",
-        Function = function(call)
-            if LightingTheme.Enabled then
-                LightingTheme:Toggle()
-                LightingTheme:Toggle()
-            end
-        end
-    })
-
-    TintColor = LightingTheme:CreateColorSlider({
-        Name = "Tint Color",
-        Function = function(h, s, v)
-            if TintToggle.Enabled and LightingTheme.Enabled then
-                for _, obj in pairs(themeobjects) do
-                    if obj:IsA("ColorCorrectionEffect") then
-                        obj.TintColor = Color3.fromHSV(h, s, v)
-                        break
-                    end
-                end
-            end
-        end
-    })
-
-    CustomTimeToggle = LightingTheme:CreateToggle({
-        Name = "Custom Time",
-        Function = function(call)
-            if LightingTheme.Enabled then
-                if call then
-                    lightingService.ClockTime = TimeOfDaySlider.Value
-                else
-                    local themeSettings = themetable[LightingThemeType.Value]()
-                    if themeSettings.Lighting.ClockTime then
-                        lightingService.ClockTime = themeSettings.Lighting.ClockTime
-                    end
-                end
-            end
-        end
-    })
-
-    TimeOfDaySlider = LightingTheme:CreateSlider({
-        Name = "Time of Day",
-        Min = 0,
-        Max = 24,
-        Default = 12,
-        Function = function(val)
-            TimeOfDaySlider.Value = val
-            if CustomTimeToggle.Enabled and LightingTheme.Enabled then
-                lightingService.ClockTime = val
-            end
-        end,
-        Suffix = function(val) return string.format("%.1f hr", val) end
-    })
+	local LightingTheme = {Enabled = false}
+	local LightingThemeType = {Value = "LunarNight"}
+	local themesky
+	local themeobjects = {}
+	local oldthemesettings = {
+		Ambient = lightingService.Ambient,
+		FogEnd = lightingService.FogEnd,
+		FogStart = lightingService.FogStart,
+		OutdoorAmbient = lightingService.OutdoorAmbient,
+	}
+	local function dumptable(tab, tabtype, sortfunction)
+		local data = {}
+		for i,v in pairs(tab) do
+			local tabtype = tabtype and tabtype == 1 and i or v
+			table.insert(data, tabtype)
+		end
+		if sortfunction and type(sortfunction) == "function" then
+			table.sort(data, sortfunction)
+		end
+		return data
+	end
+	local themetable = {
+		Purple = function()
+			if themesky then
+                themesky.SkyboxBk = "rbxassetid://8539982183"
+                themesky.SkyboxDn = "rbxassetid://8539981943"
+                themesky.SkyboxFt = "rbxassetid://8539981721"
+                themesky.SkyboxLf = "rbxassetid://8539981424"
+                themesky.SkyboxRt = "rbxassetid://8539980766"
+                themesky.SkyboxUp = "rbxassetid://8539981085"
+				lightingService.Ambient = Color3.fromRGB(170, 0, 255)
+				themesky.MoonAngularSize = 0
+                themesky.SunAngularSize = 0
+                themesky.StarCount = 3e3
+			end
+		end,
+		Galaxy = function()
+			if themesky then
+                themesky.SkyboxBk = "rbxassetid://159454299"
+                themesky.SkyboxDn = "rbxassetid://159454296"
+                themesky.SkyboxFt = "rbxassetid://159454293"
+                themesky.SkyboxLf = "rbxassetid://159454293"
+                themesky.SkyboxRt = "rbxassetid://159454293"
+                themesky.SkyboxUp = "rbxassetid://159454288"
+                lightingService.FogEnd = 200
+                lightingService.FogStart = 0
+				themesky.SunAngularSize = 0
+				lightingService.OutdoorAmbient = Color3.fromRGB(172, 18, 255)
+			end
+		end,
+		BetterNight = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://155629671"
+                themesky.SkyboxDn = "rbxassetid://12064152"
+                themesky.SkyboxFt = "rbxassetid://155629677"
+                themesky.SkyboxLf = "rbxassetid://155629662"
+                themesky.SkyboxRt = "rbxassetid://155629666"
+                themesky.SkyboxUp = "rbxassetid://155629686"
+				lightingService.FogColor = Color3.new(0, 20, 64)
+				themesky.SunAngularSize = 0
+			end
+		end,
+		BetterNight2 = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://248431616"
+                themesky.SkyboxDn = "rbxassetid://248431677"
+                themesky.SkyboxFt = "rbxassetid://248431598"
+                themesky.SkyboxLf = "rbxassetid://248431686"
+                themesky.SkyboxRt = "rbxassetid://248431611"
+                themesky.SkyboxUp = "rbxassetid://248431605"
+				themesky.StarCount = 3000
+			end
+		end,
+		MagentaOrange = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://566616113"
+                themesky.SkyboxDn = "rbxassetid://566616232"
+                themesky.SkyboxFt = "rbxassetid://566616141"
+                themesky.SkyboxLf = "rbxassetid://566616044"
+                themesky.SkyboxRt = "rbxassetid://566616082"
+                themesky.SkyboxUp = "rbxassetid://566616187"
+				themesky.StarCount = 3000
+			end
+		end,
+		Purple2 = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://8107841671"
+				themesky.SkyboxDn = "rbxassetid://6444884785"
+				themesky.SkyboxFt = "rbxassetid://8107841671"
+				themesky.SkyboxLf = "rbxassetid://8107841671"
+				themesky.SkyboxRt = "rbxassetid://8107841671"
+				themesky.SkyboxUp = "rbxassetid://8107849791"
+				themesky.SunTextureId = "rbxassetid://6196665106"
+				themesky.MoonTextureId = "rbxassetid://6444320592"
+				themesky.MoonAngularSize = 0
+			end
+		end,
+		Galaxy2 = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://14164368678"
+				themesky.SkyboxDn = "rbxassetid://14164386126"
+				themesky.SkyboxFt = "rbxassetid://14164389230"
+				themesky.SkyboxLf = "rbxassetid://14164398493"
+				themesky.SkyboxRt = "rbxassetid://14164402782"
+				themesky.SkyboxUp = "rbxassetid://14164405298"
+				themesky.SunTextureId = "rbxassetid://8281961896"
+				themesky.MoonTextureId = "rbxassetid://6444320592"
+				themesky.SunAngularSize = 0
+				themesky.MoonAngularSize = 0
+				lightingService.OutdoorAmbient = Color3.fromRGB(172, 18, 255)
+			end
+		end,
+		Pink = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://271042516"
+				themesky.SkyboxDn = "rbxassetid://271077243"
+				themesky.SkyboxFt = "rbxassetid://271042556"
+				themesky.SkyboxLf = "rbxassetid://271042310"
+				themesky.SkyboxRt = "rbxassetid://271042467"
+				themesky.SkyboxUp = "rbxassetid://271077958"
+			end
+		end,
+		Purple3 = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://433274085"
+				themesky.SkyboxDn = "rbxassetid://433274194"
+				themesky.SkyboxFt = "rbxassetid://433274131"
+				themesky.SkyboxLf = "rbxassetid://433274370"
+				themesky.SkyboxRt = "rbxassetid://433274429"
+				themesky.SkyboxUp = "rbxassetid://433274285"
+				lightingService.FogColor = Color3.new(170, 0, 255)
+				lightingService.FogEnd = 200
+				lightingService.FogStart = 0
+			end
+		end,
+		DarkishPink = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://570555736"
+				themesky.SkyboxDn = "rbxassetid://570555964"
+				themesky.SkyboxFt = "rbxassetid://570555800"
+				themesky.SkyboxLf = "rbxassetid://570555840"
+				themesky.SkyboxRt = "rbxassetid://570555882"
+				themesky.SkyboxUp = "rbxassetid://570555929"
+			end
+		end,
+		Space = function()
+			themesky.MoonAngularSize = 0
+			themesky.SunAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://166509999"
+			themesky.SkyboxDn = "rbxassetid://166510057"
+			themesky.SkyboxFt = "rbxassetid://166510116"
+			themesky.SkyboxLf = "rbxassetid://166510092"
+			themesky.SkyboxRt = "rbxassetid://166510131"
+			themesky.SkyboxUp = "rbxassetid://166510114"
+		end,
+		Galaxy3 = function()
+			themesky.MoonAngularSize = 0
+			themesky.SunAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://14543264135"
+			themesky.SkyboxDn = "rbxassetid://14543358958"
+			themesky.SkyboxFt = "rbxassetid://14543257810"
+			themesky.SkyboxLf = "rbxassetid://14543275895"
+			themesky.SkyboxRt = "rbxassetid://14543280890"
+			themesky.SkyboxUp = "rbxassetid://14543371676"
+		end,
+		NetherWorld = function()
+			themesky.MoonAngularSize = 0
+			themesky.SunAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://14365019002"
+			themesky.SkyboxDn = "rbxassetid://14365023350"
+			themesky.SkyboxFt = "rbxassetid://14365018399"
+			themesky.SkyboxLf = "rbxassetid://14365018705"
+			themesky.SkyboxRt = "rbxassetid://14365018143"
+			themesky.SkyboxUp = "rbxassetid://14365019327"
+		end,
+		Nebula = function()
+			themesky.MoonAngularSize = 0
+			themesky.SunAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://5260808177"
+			themesky.SkyboxDn = "rbxassetid://5260653793"
+			themesky.SkyboxFt = "rbxassetid://5260817288"
+			themesky.SkyboxLf = "rbxassetid://5260800833"
+			themesky.SkyboxRt = "rbxassetid://5260811073"
+			themesky.SkyboxUp = "rbxassetid://5260824661"
+			lightingService.Ambient = Color3.fromRGB(170, 0, 255)
+		end,
+		PurpleNight = function()
+			if themesky then
+			themesky.MoonAngularSize = 0
+			themesky.SunAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://5260808177"
+			themesky.SkyboxDn = "rbxassetid://5260653793"
+			themesky.SkyboxFt = "rbxassetid://5260817288"
+			themesky.SkyboxLf = "rbxassetid://5260800833"
+			themesky.SkyboxRt = "rbxassetid://5260800833"
+			themesky.SkyboxUp = "rbxassetid://5084576400"
+			lightingService.Ambient = Color3.fromRGB(170, 0, 255)
+			end
+		end,
+		Aesthetic = function()
+			if themesky then
+			themesky.MoonAngularSize = 0
+			themesky.SunAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://1417494030"
+			themesky.SkyboxDn = "rbxassetid://1417494146"
+			themesky.SkyboxFt = "rbxassetid://1417494253"
+			themesky.SkyboxLf = "rbxassetid://1417494402"
+			themesky.SkyboxRt = "rbxassetid://1417494499"
+			themesky.SkyboxUp = "rbxassetid://1417494643"
+			end
+		end,
+		Aesthetic2 = function()
+			if themesky then
+			themesky.MoonAngularSize = 0
+			themesky.SunAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://600830446"
+			themesky.SkyboxDn = "rbxassetid://600831635"
+			themesky.SkyboxFt = "rbxassetid://600832720"
+			themesky.SkyboxLf = "rbxassetid://600886090"
+			themesky.SkyboxRt = "rbxassetid://600833862"
+			themesky.SkyboxUp = "rbxassetid://600835177"
+			end
+		end,
+		Pastel = function()
+			if themesky then
+			themesky.SunAngularSize = 0
+			themesky.MoonAngularSize = 0
+			themesky.SkyboxBk = "rbxassetid://2128458653"
+			themesky.SkyboxDn = "rbxassetid://2128462480"
+			themesky.SkyboxFt = "rbxassetid://2128458653"
+			themesky.SkyboxLf = "rbxassetid://2128462027"
+			themesky.SkyboxRt = "rbxassetid://2128462027"
+			themesky.SkyboxUp = "rbxassetid://2128462236"
+			end
+		end,
+		PurpleClouds = function()
+			if themesky then
+			themesky.SkyboxBk = "rbxassetid://570557514"
+			themesky.SkyboxDn = "rbxassetid://570557775"
+			themesky.SkyboxFt = "rbxassetid://570557559"
+			themesky.SkyboxLf = "rbxassetid://570557620"
+			themesky.SkyboxRt = "rbxassetid://570557672"
+			themesky.SkyboxUp = "rbxassetid://570557727"
+			lightingService.Ambient = Color3.fromRGB(172, 18, 255)
+			end
+		end,
+		BetterSky = function()
+			if themesky then
+			themesky.SkyboxBk = "rbxassetid://591058823"
+			themesky.SkyboxDn = "rbxassetid://591059876"
+			themesky.SkyboxFt = "rbxassetid://591058104"
+			themesky.SkyboxLf = "rbxassetid://591057861"
+			themesky.SkyboxRt = "rbxassetid://591057625"
+			themesky.SkyboxUp = "rbxassetid://591059642"
+			end
+		end,
+		BetterNight3 = function()
+			if themesky then
+			themesky.MoonTextureId = "rbxassetid://1075087760"
+			themesky.SkyboxBk = "rbxassetid://2670643994"
+			themesky.SkyboxDn = "rbxassetid://2670643365"
+			themesky.SkyboxFt = "rbxassetid://2670643214"
+			themesky.SkyboxLf = "rbxassetid://2670643070"
+			themesky.SkyboxRt = "rbxassetid://2670644173"
+			themesky.SkyboxUp = "rbxassetid://2670644331"
+			themesky.MoonAngularSize = 1.5
+			themesky.StarCount = 500
+			pcall(function()
+			local MoonColorCorrection = Instance.new("ColorCorrection")
+			table.insert(themeobjects, MoonColorCorrection)
+			MoonColorCorrection.Enabled = true
+			MoonColorCorrection.TintColor = Color3.fromRGB(189, 179, 178)
+			MoonColorCorrection.Parent = game.Workspace
+			local MoonBlur = Instance.new("BlurEffect")
+			table.insert(themeobjects, MoonBlur)
+			MoonBlur.Enabled = true
+			MoonBlur.Size = 9
+			MoonBlur.Parent = game.Workspace
+			local MoonBloom = Instance.new("BloomEffect")
+			table.insert(themeobjects, MoonBloom)
+			MoonBloom.Enabled = true
+			MoonBloom.Intensity = 100
+			MoonBloom.Size = 56
+			MoonBloom.Threshold = 5
+			MoonBloom.Parent = game.Workspace
+			end)
+			end
+		end,
+		Orange = function()
+			if themesky then
+			themesky.SkyboxBk = "rbxassetid://150939022"
+			themesky.SkyboxDn = "rbxassetid://150939038"
+			themesky.SkyboxFt = "rbxassetid://150939047"
+			themesky.SkyboxLf = "rbxassetid://150939056"
+			themesky.SkyboxRt = "rbxassetid://150939063"
+			themesky.SkyboxUp = "rbxassetid://150939082"
+			end
+		end,
+		DarkMountains = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://5098814730"
+				themesky.SkyboxDn = "rbxassetid://5098815227"
+				themesky.SkyboxFt = "rbxassetid://5098815653"
+				themesky.SkyboxLf = "rbxassetid://5098816155"
+				themesky.SkyboxRt = "rbxassetid://5098820352"
+				themesky.SkyboxUp = "rbxassetid://5098819127"
+			end
+		end,
+		FlamingSunset = function()
+			if themesky then
+			themesky.SkyboxBk = "rbxassetid://415688378"
+			themesky.SkyboxDn = "rbxassetid://415688193"
+			themesky.SkyboxFt = "rbxassetid://415688242"
+			themesky.SkyboxLf = "rbxassetid://415688310"
+			themesky.SkyboxRt = "rbxassetid://415688274"
+			themesky.SkyboxUp = "rbxassetid://415688354"
+			end
+		end,
+		NewYork = function()
+			if themesky then
+			themesky.SkyboxBk = "rbxassetid://11333973069"
+			themesky.SkyboxDn = "rbxassetid://11333969768"
+			themesky.SkyboxFt = "rbxassetid://11333964303"
+			themesky.SkyboxLf = "rbxassetid://11333971332"
+			themesky.SkyboxRt = "rbxassetid://11333982864"
+			themesky.SkyboxUp = "rbxassetid://11333967970"
+			themesky.SunAngularSize = 0
+			end
+		end,
+		Aesthetic3 = function()
+			if themesky then
+			themesky.SkyboxBk = "rbxassetid://151165214"
+			themesky.SkyboxDn = "rbxassetid://151165197"
+			themesky.SkyboxFt = "rbxassetid://151165224"
+			themesky.SkyboxLf = "rbxassetid://151165191"
+			themesky.SkyboxRt = "rbxassetid://151165206"
+			themesky.SkyboxUp = "rbxassetid://151165227"
+			end
+		end,
+		FakeClouds = function()
+			if themesky then
+			themesky.SkyboxBk = "rbxassetid://8496892810"
+			themesky.SkyboxDn = "rbxassetid://8496896250"
+			themesky.SkyboxFt = "rbxassetid://8496892810"
+			themesky.SkyboxLf = "rbxassetid://8496892810"
+			themesky.SkyboxRt = "rbxassetid://8496892810"
+			themesky.SkyboxUp = "rbxassetid://8496897504"
+			themesky.SunAngularSize = 0
+			end
+		end,
+		LunarNight = function()
+			if themesky then
+				themesky.SkyboxBk = "rbxassetid://187713366"
+				themesky.SkyboxDn = "rbxassetid://187712428"
+				themesky.SkyboxFt = "rbxassetid://187712836"
+				themesky.SkyboxLf = "rbxassetid://187713755"
+				themesky.SkyboxRt = "rbxassetid://187714525"
+				themesky.SkyboxUp = "rbxassetid://187712111"
+				themesky.SunAngularSize = 0
+				themesky.StarCount = 0
+			end
+		end,
+		PitchDark = function()
+			themesky.StarCount = 0
+			lightingService.TimeOfDay = "00:00:00"
+			LightingTheme:Clean(lightingService:GetPropertyChangedSignal("TimeOfDay"):Connect(function()
+				pcall(function()
+				themesky.StarCount = 0
+				lightingService.TimeOfDay = "00:00:00"
+				end)
+			end))
+		end
+	}
+	LightingTheme = vape.Categories.World:CreateModule({
+		Name = "LightingTheme",
+		Tooltip = "Add a whole new look to your game.",
+		ExtraText = function() return LightingThemeType.Value end,
+		Function = function(callback) 
+			if callback then 
+				task.spawn(function()
+					task.wait()
+					themesky = Instance.new("Sky")
+					local success, err = pcall(themetable[LightingThemeType.Value])
+					err = err and " | "..err or ""
+					vapeAssert(success, "LightingTheme", "Failed to load the "..LightingThemeType.Value.." theme."..err, 5)
+					themesky.Parent = success and lightingService or nil
+					LightingTheme:Clean(lightingService.ChildAdded:Connect(function(v)
+						if success and v:IsA("Sky") then 
+							v.Parent = nil
+						end
+					end))
+				end)
+			else
+				if themesky then 
+					themesky = pcall(function() themesky:Destroy() end)
+					for i,v in pairs(themeobjects) do 
+						pcall(function() v:Destroy() end)
+					end
+					table.clear(themeobjects)
+					for i,v in pairs(lightingService:GetChildren()) do 
+						if v:IsA("Sky") and themesky then 
+							pcall(function()
+								v.Parent = nil 
+								v.Parent = lightingService
+							end)
+						end
+					end
+					for i,v in pairs(oldthemesettings) do 
+						pcall(function() lightingService[i] = v end)
+					end
+				end
+				themesky = nil
+			end
+		end
+	})
+	LightingThemeType = LightingTheme:CreateDropdown({
+		Name = "Theme",
+		List = dumptable(themetable, 1),
+		Function = function()
+			if LightingTheme.Enabled then 
+				LightingTheme:Toggle(false)
+				LightingTheme:Toggle(false)
+			end
+		end
+	})
 end)
 
 local Maid = {}

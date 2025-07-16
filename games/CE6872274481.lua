@@ -280,54 +280,82 @@ local function logRemoteUsage(remoteName, callType)
     end
 end
 
+local remoteThrottleTable = {}
+local REMOTE_THROTTLE_TIME = {
+    SwordHit = 0.1,
+    ChestGetItem = 1.0,
+    SetObservedChest = 0.2,
+    _default = 0.1
+}
+
+local function shouldThrottle(remoteName)
+    local now = tick()
+    local throttleTime = REMOTE_THROTTLE_TIME[remoteName] or REMOTE_THROTTLE_TIME._default
+    if not remoteThrottleTable[remoteName] or now - remoteThrottleTable[remoteName] > throttleTime then
+        remoteThrottleTable[remoteName] = now
+        return false
+    end
+	if shared.VoidDev and shared.ThrottleDebug then
+   	 	warn("[Remote Throttle] Throttled remote call to '" .. tostring(remoteName) .. "' at " .. tostring(now))
+	end
+    return true
+end
+
 local function decorateRemote(remote, src)
-	local isFunction = string.find(string.lower(remote.ClassName), "function")
-	local isEvent = string.find(string.lower(remote.ClassName), "remoteevent")
-	local isBindable = string.find(string.lower(remote.ClassName), "bindable")
+    local isFunction = string.find(string.lower(remote.ClassName), "function")
+    local isEvent = string.find(string.lower(remote.ClassName), "remoteevent")
+    local isBindable = string.find(string.lower(remote.ClassName), "bindable")
 
-	if isFunction then
-		function src:CallServer(...)
-			local args = {...}
+    local function middlewareCall(method, ...)
+        local remoteName = remote.Name
+		local args = {...}
+        if shouldThrottle(remoteName) then
+            return
+        end
+        return method(...)
+    end
+
+    if isFunction then
+        function src:CallServer(...)
 			logRemoteUsage(remote, "InvokeServer")
-			return remote:InvokeServer(unpack(args))
-		end
-	elseif isEvent then
-		function src:CallServer(...)
-			local args = {...}
+            return middlewareCall(function(...) return remote:InvokeServer(...) end, ...)
+        end
+    elseif isEvent then
+        function src:CallServer(...)
 			logRemoteUsage(remote, "FireServer")
-			return remote:FireServer(unpack(args))
-		end
-	elseif isBindable then
-		function src:CallServer(...)
-			local args = {...}
+            return middlewareCall(function(...) return remote:FireServer(...) end, ...)
+        end
+    elseif isBindable then
+        function src:CallServer(...)
 			logRemoteUsage(remote, "BindableFire")
-			return remote:Fire(unpack(args))
-		end
-	end
+            return middlewareCall(function(...) return remote:Fire(...) end, ...)
+        end
+    end
 
-	function src:InvokeServer(...)
-		local args = {...}
-		src:CallServer(unpack(args))
-	end
+    function src:InvokeServer(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
 
-	function src:FireServer(...)
-		local args = {...}
-		src:CallServer(unpack(args))
-	end
+    function src:FireServer(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
 
-	function src:SendToServer(...)
-		local args = {...}
-		src:CallServer(unpack(...))
-	end
+    function src:SendToServer(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
 
-	function src:CallServerAsync(...)
-		local args = {...}
-		src:CallServer(unpack(args))
-	end
+    function src:CallServerAsync(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
 
-	src.instance = remote
+    src.instance = remote
+	src._custom = true
 
-	return src
+    return src
 end
 
 function bedwars.Client:Get(remName, customTable, resRequired)
@@ -410,6 +438,7 @@ bedwars.ItemHandler.getItemMeta = function(item)
     return nil
 end
 bedwars.ItemTable = bedwars.ItemHandler.ItemMeta.items
+bedwars.ItemMeta = bedwars.ItemTable
 bedwars.KitMeta = decode(VoidwareFunctions.fetchCheatEngineSupportFile("KitMeta.json"))
 --decode(readfile("vape/CheatEngine/KitMeta.json"))
 bedwars.ProdAnimationsMeta = decode(VoidwareFunctions.fetchCheatEngineSupportFile("ProdAnimationsMeta.json"))
@@ -4240,6 +4269,28 @@ run(function()
 	local AttackRemote = {FireServer = function() end}
 	task.spawn(function()
 		AttackRemote = bedwars.Client:Get(bedwars.AttackRemote)
+		local Reach = Reach or {Enabled = false}
+		local HitBoxes = HitBoxes or {Enabled = false}
+		AttackRemote.FireServer = function(self, attackTable, ...)
+			local suc, plr = pcall(function()
+				return playersService:GetPlayerFromCharacter(attackTable.entityInstance)
+			end)
+
+			local selfpos = attackTable.validate.selfPosition.value
+			local targetpos = attackTable.validate.targetPosition.value
+			store.attackReach = ((selfpos - targetpos).Magnitude * 100) // 1 / 100
+			store.attackReachUpdate = tick() + 1
+			if Reach.Enabled or HitBoxes.Enabled then
+				attackTable.validate.raycast = attackTable.validate.raycast or {}
+				attackTable.validate.selfPosition.value += CFrame.lookAt(selfpos, targetpos).LookVector * math.max((selfpos - targetpos).Magnitude - 14.399, 0)
+			end
+
+			if suc and plr then
+				if not select(2, whitelist:get(plr)) then return end
+			end
+
+			return self:SendToServer(attackTable, ...)
+		end
 	end)
 
 	local lastSwingServerTime = 0
@@ -4305,6 +4356,9 @@ run(function()
 		return sword, meta
 	end
 
+	local preserveSwordIcon = false
+	local sigridcheck = false
+
 	Killaura = vape.Categories.Blatant:CreateModule({
 		Name = 'Killaura',
 		Function = function(callback)
@@ -4315,7 +4369,7 @@ run(function()
 				if RangeCircle.Enabled then
 					createRangeCircle()
 				end
-				if inputService.TouchEnabled then
+				if inputService.TouchEnabled and not preserveSwordIcon then
 					pcall(function()
 						lplr.PlayerGui.MobileUI['2'].Visible = Limit.Enabled
 					end)
@@ -4392,6 +4446,7 @@ run(function()
 					store.KillauraTarget = nil
 					pcall(function() vapeTargetInfo.Targets.Killaura = nil end)
 					if sword then
+						if sigridcheck and entitylib.isAlive and lplr.Character:FindFirstChild("elk") then return end
 						local isClaw = string.find(string.lower(tostring(sword and sword.itemType or "")), "summoner_claw")
 						local plrs = entitylib.AllPosition({
 							Range = Range.Value,
@@ -4535,6 +4590,18 @@ run(function()
 		end,
 		Tooltip = 'Attack players around you\nwithout aiming at them.'
 	})
+
+	pcall(function()
+		local PSI = Killaura:CreateToggle({
+			Name = 'Preserve Sword Icon',
+			Function = function(callback)
+				preserveSwordIcon = callback
+			end,
+			Default = true
+		})
+		PSI.Object.Visible = inputService.TouchEnabled
+	end)
+	
 	Targets = Killaura:CreateTargets({
 		Players = true,
 		NPCs = true
@@ -4782,6 +4849,13 @@ run(function()
 	Sync = Killaura:CreateToggle({
 		Name = 'Synced Animation',
 		Tooltip = 'Plays animation with hit attempt'
+	})
+	Killaura:CreateToggle({
+		Name = "Sigrid Check",
+		Default = false,
+		Function = function(call)
+			sigridcheck = call
+		end
 	})
 end)
 
@@ -6913,6 +6987,50 @@ run(function()
 	end
 end)
 
+local function collection(tags, module, customadd, customremove)
+	tags = typeof(tags) ~= 'table' and {tags} or tags
+	local objs, connections = {}, {}
+
+	for _, tag in tags do
+		table.insert(connections, collectionService:GetInstanceAddedSignal(tag):Connect(function(v)
+			if customadd then
+				customadd(objs, v, tag)
+				return
+			end
+			table.insert(objs, v)
+		end))
+		table.insert(connections, collectionService:GetInstanceRemovedSignal(tag):Connect(function(v)
+			if customremove then
+				customremove(objs, v, tag)
+				return
+			end
+			v = table.find(objs, v)
+			if v then
+				table.remove(objs, v)
+			end
+		end))
+
+		for _, v in collectionService:GetTagged(tag) do
+			if customadd then
+				customadd(objs, v, tag)
+				continue
+			end
+			table.insert(objs, v)
+		end
+	end
+
+	local cleanFunc = function(self)
+		for _, v in connections do
+			v:Disconnect()
+		end
+		table.clear(connections)
+		table.clear(objs)
+		table.clear(self)
+	end
+
+	return objs, cleanFunc
+end
+
 run(function()
 	local ChestStealer = {Enabled = false}
 	local ChestStealerDistance = {Value = 1}
@@ -6973,11 +7091,12 @@ run(function()
 		end
 	}
 
+
 	ChestStealer = vape.Categories.Utility:CreateModule({
 		Name = "Chest Stealer",
 		Function = function(callback)
 			if callback then
-				chests = collectionService:GetTagged("chest")
+				local chests = collection('chest', ChestSteal)
 				task.spawn(function()
 					repeat task.wait(5)
 						chests = collectionService:GetTagged("chest")
@@ -6986,7 +7105,7 @@ run(function()
 				task.spawn(function()
 					repeat task.wait() until store.matchState > 0
 					repeat
-						task.wait(0.4)
+						task.wait(0.9)
 						if entityLibrary.isAlive then
 							cheststealerfuncs[ChestStealerOpen.Enabled and "Open" or "Closed"]()
 						end
@@ -8045,50 +8164,6 @@ run(function()
 			end
 		end
 		return lowestplayer
-	end
-
-	local function collection(tags, module, customadd, customremove)
-		tags = typeof(tags) ~= 'table' and {tags} or tags
-		local objs, connections = {}, {}
-	
-		for _, tag in tags do
-			table.insert(connections, collectionService:GetInstanceAddedSignal(tag):Connect(function(v)
-				if customadd then
-					customadd(objs, v, tag)
-					return
-				end
-				table.insert(objs, v)
-			end))
-			table.insert(connections, collectionService:GetInstanceRemovedSignal(tag):Connect(function(v)
-				if customremove then
-					customremove(objs, v, tag)
-					return
-				end
-				v = table.find(objs, v)
-				if v then
-					table.remove(objs, v)
-				end
-			end))
-	
-			for _, v in collectionService:GetTagged(tag) do
-				if customadd then
-					customadd(objs, v, tag)
-					continue
-				end
-				table.insert(objs, v)
-			end
-		end
-	
-		local cleanFunc = function(self)
-			for _, v in connections do
-				v:Disconnect()
-			end
-			table.clear(connections)
-			table.clear(objs)
-			table.clear(self)
-		end
-	
-		return objs, cleanFunc
 	end
 
 	local function kitCollection(id, func, range, specific)
