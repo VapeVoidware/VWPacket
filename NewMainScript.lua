@@ -127,7 +127,8 @@ local function checkDebug()
         end
     end
 end
-if (not CheatEngineMode) then checkDebug() end
+--if (not CheatEngineMode) then checkDebug() end
+if shared.ForceDisableCE then CheatEngineMode = false; shared.CheatEngineMode = false end
 shared.CheatEngineMode = shared.CheatEngineMode or CheatEngineMode
 if (not isfolder('vape')) then makefolder('vape') end
 if (not isfolder('rise')) then makefolder('rise') end
