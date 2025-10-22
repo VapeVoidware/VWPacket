@@ -12,6 +12,11 @@ end
 local delfile = delfile or function(file)
 	writefile(file, '')
 end
+local smooth = not game:IsLoaded()
+repeat task.wait() until game:IsLoaded()
+if smooth then
+    task.wait(10)
+end
 
 local function wipeFolder(path)
 	if not isfolder(path) then return end
