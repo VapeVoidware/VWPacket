@@ -4195,8 +4195,8 @@ local function isFirstPerson()
 	return (entitylib.character.Head.Position - gameCamera.CFrame.Position).Magnitude < 2
 end
 
-bedwars.ViewModel = workspace.CurrentCamera.Viewmodel.RightHand.RightWrist
-local oldrotation = bedwars.ViewModel.C0
+--bedwars.ViewModel = workspace.CurrentCamera.Viewmodel.RightHand.RightWrist
+--local oldrotation = bedwars.ViewModel.C0
 
 local originalArmC0, originalNeckC0, originalRootC0
 
