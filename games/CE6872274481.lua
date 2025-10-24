@@ -2799,6 +2799,8 @@ run(function()
 			return false
 		end
 		if isNPC(v.Name) then
+			if not v.PrimaryPart then task.wait(1) end
+			if not v:FindFirstChild("HumanoidRootPart") then task.wait(1) end
 			if v.PrimaryPart then
 				v.Name = v.Name.." | "..tostring(#checked)
 				entitylib.addEntity(v, nil, function() return true end)
@@ -4464,6 +4466,9 @@ run(function()
 							Limit = MaxTargets.Value,
 							Sort = sortmethods[Sort.Value]
 						})
+						if #plrs < 1 then
+							plrs = {EntityNearPosition(Range.Value, Targets.NPCs.Enabled)}
+						end
 						if #plrs > 0 then
 							switchItem(sword.tool, 0)
 							local selfpos = entitylib.character.RootPart.Position
@@ -5068,9 +5073,11 @@ run(function()
 					end)
 					local LongJumpOrigin = entityLibrary.isAlive and entityLibrary.character.HumanoidRootPart.Position
 					local tntcheck
+					local foundItem = false
 					for i,v in pairs(damagemethods) do
 						local item = getItem(i)
 						if item then
+							foundItem = true
 							if i == "tnt" then
 								local pos = getScaffold(LongJumpOrigin)
 								tntcheck = Vector3.new(pos.X, LongJumpOrigin.Y, pos.Z)
@@ -5080,6 +5087,11 @@ run(function()
 							end
 							break
 						end
+					end
+					if not foundItem then
+						warningNotification("LongJump", "Unable to find tool to use Long Jump with :c", 3)
+						LongJump:Toggle()
+						return
 					end
 					local changecheck
 					LongJumpacprogressbarframe.Visible = true
