@@ -53,9 +53,13 @@ task.spawn(function()
 end)
 local CheatEngineMode = false
 if (not getgenv) or (getgenv and type(getgenv) ~= "function") then CheatEngineMode = true end
-if getgenv and not getgenv().shared then CheatEngineMode = true; getgenv().shared = {}; end
-if getgenv and not getgenv().debug then CheatEngineMode = true; getgenv().debug = {traceback = function(string) return string end} end
-if getgenv and not getgenv().require then CheatEngineMode = true; end
+if getgenv and not getgenv().shared then CheatEngineMode = true
+getgenv().shared = {}
+end
+if getgenv and not getgenv().debug then CheatEngineMode = true
+getgenv().debug = {traceback = function(string) return string end} end
+if getgenv and not getgenv().require then CheatEngineMode = true
+end
 if getgenv and getgenv().require and type(getgenv().require) ~= "function" then CheatEngineMode = true end
 local debugChecks = {
     Type = "table",
@@ -285,7 +289,8 @@ task.spawn(function()
     end)
 end)
 --if (not CheatEngineMode) then checkDebug() end
-if shared.ForceDisableCE then CheatEngineMode = false; shared.CheatEngineMode = false end
+if shared.ForceDisableCE then CheatEngineMode = false
+shared.CheatEngineMode = false end
 shared.CheatEngineMode = shared.CheatEngineMode or CheatEngineMode
 if (not isfolder('vape')) then makefolder('vape') end
 if (not isfolder('rise')) then makefolder('rise') end
@@ -375,6 +380,7 @@ local commit = "main"
 writefile(baseDirectory.."commithash2.txt", commit)
 commit = '00f509b3fc8306da0f85be8154c26ab833c394fe'
 commit = shared.CustomCommit and tostring(shared.CustomCommit) or commit
+shared.VOIDWARE_SCRIPT_TYPE = "BEDWARS_PACKET"
 writefile(baseDirectory.."commithash2.txt", commit)
 local function vapeGithubRequest(scripturl, isImportant)
     if isfile(baseDirectory..scripturl) then
@@ -423,7 +429,8 @@ local function pload(fileName, isImportant, required)
     local res = vapeGithubRequest(fileName, isImportant)
     local a = loadstring(res)
     local suc, err = true, ""
-    if type(a) ~= "function" then suc = false; err = tostring(a) else if required then return a() else a() end end
+    if type(a) ~= "function" then suc = false
+err = tostring(a) else if required then return a() else a() end end
     if (not suc) then 
         if isImportant then
             if not string.find(string.lower(err), 'already injected') then
